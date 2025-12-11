@@ -1,0 +1,189 @@
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { Shield, User as UserIcon, Plus, Wrench } from "lucide-react";
+import Link from "next/link";
+import { ToggleUserButton } from "./ToggleUserButton";
+import { ChangePasswordButton } from "./ChangePasswordButton";
+
+async function checkSuperAdmin() {
+  const supabase = await createClient();
+  const { data: { user: authUser } } = await supabase.auth.getUser();
+  if (!authUser) return false;
+
+  const { data: user } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", authUser.id)
+    .single();
+
+  return user?.role === "super_admin";
+}
+
+async function getUsers() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("users")
+    .select("*")
+    .order("created_at", { ascending: false });
+  return data || [];
+}
+
+export default async function UsersPage() {
+  const isSuperAdmin = await checkSuperAdmin();
+  if (!isSuperAdmin) {
+    redirect("/dashboard");
+  }
+
+  const users = await getUsers();
+  const superAdmins = users.filter((u) => u.role === "super_admin");
+  const admins = users.filter((u) => u.role === "admin");
+  const workers = users.filter((u) => u.role === "maintenance_worker");
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">إدارة المستخدمين</h1>
+          <p className="text-gray-600 mt-1">إضافة وتعديل المستخدمين</p>
+        </div>
+        <Link
+          href="/dashboard/users/new"
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+        >
+          <Plus className="w-5 h-5" />
+          <span>إضافة مستخدم</span>
+        </Link>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg shadow p-4 border-r-4 border-blue-500">
+          <p className="text-gray-600 text-sm">إجمالي المستخدمين</p>
+          <p className="text-3xl font-bold">{users.length}</p>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 border-r-4 border-purple-500">
+          <p className="text-gray-600 text-sm">مدراء عامون</p>
+          <p className="text-3xl font-bold">{superAdmins.length}</p>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 border-r-4 border-green-500">
+          <p className="text-gray-600 text-sm">موظفون</p>
+          <p className="text-3xl font-bold">{admins.length}</p>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 border-r-4 border-orange-500">
+          <p className="text-gray-600 text-sm">عمال صيانة</p>
+          <p className="text-3xl font-bold">{workers.length}</p>
+        </div>
+      </div>
+
+      {/* Super Admins */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="border-b px-6 py-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Shield className="w-5 h-5 text-purple-600" />
+            المشرفون الأعلى ({superAdmins.length})
+          </h2>
+        </div>
+        <div className="divide-y">
+          {superAdmins.map((user) => (
+            <div key={user.id} className="px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="bg-purple-100 text-purple-600 w-12 h-12 rounded-full flex items-center justify-center">
+                  <Shield className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold">{user.name}</h3>
+                    {!user.is_active && (
+                      <span className="px-2 py-1 rounded text-xs bg-red-100 text-red-600">معطل</span>
+                    )}
+                  </div>
+                  <p className="text-gray-600 text-sm">{user.email}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <ChangePasswordButton userId={user.id} userEmail={user.email} />
+                <ToggleUserButton id={user.id} isActive={user.is_active} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Admins */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="border-b px-6 py-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <UserIcon className="w-5 h-5 text-green-600" />
+            الموظفون ({admins.length})
+          </h2>
+        </div>
+        <div className="divide-y">
+          {admins.length > 0 ? (
+            admins.map((user) => (
+              <div key={user.id} className="px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="bg-green-100 text-green-600 w-12 h-12 rounded-full flex items-center justify-center">
+                    <UserIcon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold">{user.name}</h3>
+                      {!user.is_active && (
+                        <span className="px-2 py-1 rounded text-xs bg-red-100 text-red-600">معطل</span>
+                      )}
+                    </div>
+                    <p className="text-gray-600 text-sm">{user.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ChangePasswordButton userId={user.id} userEmail={user.email} />
+                  <ToggleUserButton id={user.id} isActive={user.is_active} />
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500 text-center py-8">لا يوجد موظفون</p>
+          )}
+        </div>
+      </div>
+
+      {/* Maintenance Workers */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="border-b px-6 py-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Wrench className="w-5 h-5 text-orange-600" />
+            عمال الصيانة ({workers.length})
+          </h2>
+        </div>
+        <div className="divide-y">
+          {workers.length > 0 ? (
+            workers.map((user) => (
+              <div key={user.id} className="px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="bg-orange-100 text-orange-600 w-12 h-12 rounded-full flex items-center justify-center">
+                    <Wrench className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold">{user.name}</h3>
+                      {!user.is_active && (
+                        <span className="px-2 py-1 rounded text-xs bg-red-100 text-red-600">معطل</span>
+                      )}
+                    </div>
+                    <p className="text-gray-600 text-sm">{user.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ChangePasswordButton userId={user.id} userEmail={user.email} />
+                  <ToggleUserButton id={user.id} isActive={user.is_active} />
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500 text-center py-8">لا يوجد عمال صيانة</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
