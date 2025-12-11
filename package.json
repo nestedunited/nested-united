@@ -1,0 +1,101 @@
+{
+  "name": "rentals-dashboard",
+  "version": "1.0.0",
+  "description": "لوحة تحكم لإدارة الوحدات السكنية والإيجارات",
+  "author": "Mohamed Amir Elsamahy <https://samahy.tech/>",
+  "private": true,
+  "main": "electron/dist/main.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && npm run electron:start\"",
+    "electron:start": "tsc -p electron/tsconfig.json && electron .",
+    "electron:build": "npm run build && npm run electron:compile && electron-builder",
+    "electron:compile": "tsc -p electron/tsconfig.json",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.87.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "ical.js": "^2.2.1",
+    "lucide-react": "^0.556.0",
+    "next": "16.0.8",
+    "react": "19.2.1",
+    "react-dom": "19.2.1",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
+    "electron": "^39.2.6",
+    "electron-builder": "^26.0.12",
+    "electron-icon-builder": "^2.0.1",
+    "electron-icon-maker": "^0.0.5",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.8",
+    "rcedit": "^5.0.2",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "wait-on": "^9.0.3"
+  },
+  "build": {
+    "appId": "com.rentals.dashboard",
+    "productName": "Rentals Dashboard",
+    "directories": {
+      "output": "dist-electron",
+      "buildResources": "build"
+    },
+    "icon": "build/icon.ico",
+    "files": [
+      "electron/dist/**/*",
+      ".next/standalone/**/*",
+      ".next/static/**/*",
+      "public/**/*",
+      "!node_modules",
+      "!node_modules/@img/sharp-darwin-*/**/*",
+      "!node_modules/@img/sharp-linux-*/**/*",
+      "!node_modules/@img/sharp-darwin-arm64/**/*",
+      "!node_modules/@emnapi/**/*"
+    ],
+    "extraFiles": [
+      {
+        "from": ".next/static",
+        "to": ".next/standalone/.next/static"
+      },
+      {
+        "from": "public",
+        "to": ".next/standalone/public"
+      }
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico"
+    },
+    "npmRebuild": false,
+    "buildDependenciesFromSource": false,
+    "nodeGypRebuild": false,
+    "forceCodeSigning": false
+  }
+}
