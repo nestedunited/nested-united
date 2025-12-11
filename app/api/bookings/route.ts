@@ -4,6 +4,13 @@ import { getCurrentUser } from "@/lib/auth";
 
 // GET /api/bookings - list bookings with optional filters
 export async function GET(request: NextRequest) {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json(
+      { error: "SUPABASE_SERVICE_ROLE_KEY is not configured on the server." },
+      { status: 500 }
+    );
+  }
+
   const supabase = createServiceClient();
   const currentUser = await getCurrentUser();
   if (!currentUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
