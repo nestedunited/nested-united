@@ -35,7 +35,36 @@ export async function GET(request: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const rows = data || [];
+  const bookingsRows = data || [];
+
+  // أيضاً نجلب حجوزات iCal من جدول reservations لتضمينها في التصدير
+  const { data: reservationsData, error: reservationsError } = await supabase
+    .from("reservations")
+    .select(`*, unit:units(id, unit_name, unit_code)`)
+    .order("start_date", { ascending: false });
+
+  if (reservationsError) {
+    console.error("Reservations fetch error:", reservationsError);
+  }
+
+  const reservationsRows = (reservationsData || []).map((r: any) => ({
+    guest_name: r.summary || "حجز iCal",
+    phone: null,
+    checkin_date: r.start_date,
+    checkout_date: r.end_date,
+    unit: r.unit,
+    platform: r.platform || "ical",
+    platform_account_id: r.unit?.platform_account_id ?? null,
+    amount: null,
+    currency: null,
+    notes: r.summary || "",
+  }));
+
+  const rows = [...bookingsRows, ...reservationsRows].sort(
+    (a: any, b: any) =>
+      new Date(b.checkin_date || b.start_date).getTime() -
+      new Date(a.checkin_date || a.start_date).getTime()
+  );
 
   if (!exportCsv) {
     return NextResponse.json(rows);
