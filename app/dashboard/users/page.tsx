@@ -4,6 +4,9 @@ import { Shield, User as UserIcon, Plus, Wrench } from "lucide-react";
 import Link from "next/link";
 import { ToggleUserButton } from "./ToggleUserButton";
 import { ChangePasswordButton } from "./ChangePasswordButton";
+import { EditPermissionsButton } from "./EditPermissionsButton";
+import { EditUserButton } from "./EditUserButton";
+import { DeleteUserButton } from "./DeleteUserButton";
 
 async function checkSuperAdmin() {
   const supabase = await createClient();
@@ -101,8 +104,15 @@ export default async function UsersPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <EditUserButton 
+                  userId={user.id} 
+                  userName={user.name} 
+                  userEmail={user.email} 
+                  userRole={user.role} 
+                />
                 <ChangePasswordButton userId={user.id} userEmail={user.email} />
                 <ToggleUserButton id={user.id} isActive={user.is_active} />
+                <DeleteUserButton userId={user.id} userName={user.name} userEmail={user.email} />
               </div>
             </div>
           ))}
@@ -136,8 +146,16 @@ export default async function UsersPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <EditUserButton 
+                    userId={user.id} 
+                    userName={user.name} 
+                    userEmail={user.email} 
+                    userRole={user.role} 
+                  />
+                  <EditPermissionsButton userId={user.id} userName={user.name} />
                   <ChangePasswordButton userId={user.id} userEmail={user.email} />
                   <ToggleUserButton id={user.id} isActive={user.is_active} />
+                  <DeleteUserButton userId={user.id} userName={user.name} userEmail={user.email} />
                 </div>
               </div>
             ))
@@ -174,8 +192,16 @@ export default async function UsersPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <EditUserButton 
+                    userId={user.id} 
+                    userName={user.name} 
+                    userEmail={user.email} 
+                    userRole={user.role} 
+                  />
+                  <EditPermissionsButton userId={user.id} userName={user.name} />
                   <ChangePasswordButton userId={user.id} userEmail={user.email} />
                   <ToggleUserButton id={user.id} isActive={user.is_active} />
+                  <DeleteUserButton userId={user.id} userName={user.name} userEmail={user.email} />
                 </div>
               </div>
             ))

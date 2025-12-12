@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { use } from "react";
+import { usePermission } from "@/lib/hooks/usePermission";
 
 export default function EditUnitPage({
   params,
@@ -13,9 +14,16 @@ export default function EditUnitPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const canEdit = usePermission("edit");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [unit, setUnit] = useState<any>(null);
+
+  useEffect(() => {
+    if (canEdit === false) {
+      router.push(`/dashboard/units/${id}?error=no_permission`);
+    }
+  }, [canEdit, router, id]);
 
   useEffect(() => {
     fetch(`/api/units/${id}`)
@@ -59,6 +67,23 @@ export default function EditUnitPage({
       setLoading(false);
     }
   };
+
+  if (canEdit === null) {
+    return <div className="text-center py-12">جاري التحميل...</div>;
+  }
+
+  if (canEdit === false) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center">
+          <p className="font-semibold mb-2">ليس لديك صلاحية لتعديل الوحدات</p>
+          <Link href={`/dashboard/units/${id}`} className="text-blue-600 hover:underline">
+            العودة للوحدة
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (!unit) {
     return <div className="text-center py-12">جاري التحميل...</div>;
@@ -166,6 +191,7 @@ export default function EditUnitPage({
     </div>
   );
 }
+
 
 
 

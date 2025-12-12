@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, AlertCircle, Plus } from "lucide-react";
+import { usePermission } from "@/lib/hooks/usePermission";
 
 interface UnitOption {
   id: string;
@@ -19,6 +20,13 @@ interface AccountOption {
 
 export default function NewBookingPage() {
   const router = useRouter();
+  const canEdit = usePermission("edit");
+
+  useEffect(() => {
+    if (canEdit === false) {
+      router.push("/dashboard/bookings?error=no_permission");
+    }
+  }, [canEdit, router]);
   const [units, setUnits] = useState<UnitOption[]>([]);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -71,6 +79,23 @@ export default function NewBookingPage() {
       setLoading(false);
     }
   };
+
+  if (canEdit === null) {
+    return <div className="text-center py-12">جاري التحميل...</div>;
+  }
+
+  if (canEdit === false) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center">
+          <p className="font-semibold mb-2">ليس لديك صلاحية لإضافة الحجوزات</p>
+          <Link href="/dashboard/bookings" className="text-blue-600 hover:underline">
+            العودة للحجوزات
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -190,5 +215,6 @@ export default function NewBookingPage() {
     </div>
   );
 }
+
 
 

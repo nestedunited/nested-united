@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { TabBar } from "@/components/layout/TabBar";
 import { ElectronNotificationHandler } from "@/components/ElectronNotificationHandler";
 import { NotificationManager } from "@/components/NotificationManager";
+import { ActivityLogger } from "@/components/ActivityLogger";
 
 export default async function DashboardLayout({
   children,
@@ -43,6 +44,7 @@ export default async function DashboardLayout({
     <div className="min-h-screen bg-gray-50">
       <ElectronNotificationHandler />
       <NotificationManager />
+      <ActivityLogger />
       <Header user={user} unreadCount={unreadCount} />
       <TabBar />
       <div className="flex">

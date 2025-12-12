@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import { checkUserPermission, logActivityInServer } from "@/lib/permissions";
 
 // GET /api/bookings - list bookings with optional filters
 export async function GET(request: NextRequest) {
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
   if (!currentUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
-  const platformAccountId = searchParams.get("platform_account_id");
+  const platformAccountIds = searchParams.getAll("platform_account_id"); // Get all values for multiple selection
   const unitId = searchParams.get("unit_id");
   const from = searchParams.get("from");
   const to = searchParams.get("to");
@@ -27,7 +28,10 @@ export async function GET(request: NextRequest) {
     .select("*, unit:units(id, unit_name, unit_code)")
     .order("checkin_date", { ascending: false });
 
-  if (platformAccountId) query = query.eq("platform_account_id", platformAccountId);
+  // Support multiple platform_account_id
+  if (platformAccountIds.length > 0) {
+    query = query.in("platform_account_id", platformAccountIds);
+  }
   if (unitId) query = query.eq("unit_id", unitId);
   if (from) query = query.gte("checkin_date", from);
   if (to) query = query.lte("checkout_date", to);
@@ -60,7 +64,17 @@ export async function GET(request: NextRequest) {
     notes: r.summary || "",
   }));
 
-  const rows = [...bookingsRows, ...reservationsRows].sort(
+  let rows = [...bookingsRows, ...reservationsRows];
+  
+  // Filter by platform_account_id for reservations if needed
+  if (platformAccountIds.length > 0) {
+    rows = rows.filter((item: any) => {
+      const itemAccountId = item.platform_account_id || item.unit?.platform_account_id;
+      return itemAccountId && platformAccountIds.includes(itemAccountId);
+    });
+  }
+  
+  rows.sort(
     (a: any, b: any) =>
       new Date(b.checkin_date || b.start_date).getTime() -
       new Date(a.checkin_date || a.start_date).getTime()
@@ -121,6 +135,12 @@ export async function POST(request: NextRequest) {
   const currentUser = await getCurrentUser();
   if (!currentUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Check permission
+  const hasPermission = await checkUserPermission(currentUser.id, "/dashboard/bookings", "edit");
+  if (!hasPermission) {
+    return NextResponse.json({ error: "Forbidden: لا تملك صلاحية الإنشاء" }, { status: 403 });
+  }
+
   const body = await request.json();
   const {
     unit_id,
@@ -158,6 +178,17 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Log activity
+  await logActivityInServer({
+    userId: currentUser.id,
+    action_type: "create",
+    page_path: "/dashboard/bookings",
+    resource_type: "booking",
+    resource_id: data.id,
+    description: `إنشاء حجز جديد: ${guest_name}`,
+    metadata: { guest_name, unit_id, checkin_date, checkout_date },
+  });
 
   return NextResponse.json(data, { status: 201 });
 }

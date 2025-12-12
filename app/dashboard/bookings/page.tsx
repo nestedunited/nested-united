@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Plus, Download, Calendar } from "lucide-react";
 import { PlatformExtended } from "@/lib/types/database";
 import { BookingsView } from "./BookingsView";
+import { BookingsPageClient } from "./BookingsPageClient";
 
 async function getFilters() {
   const supabase = await createClient();
@@ -13,7 +14,7 @@ async function getFilters() {
   return { accounts: accounts || [], units: units || [] };
 }
 
-async function getBookings(searchParams?: { from?: string; to?: string; platform_account_id?: string; unit_id?: string; platform?: string }) {
+async function getBookings(searchParams?: { from?: string; to?: string; platform_account_id?: string | string[]; unit_id?: string; platform?: string }) {
   const filters = searchParams || {};
   const supabase = await createClient();
   
@@ -27,8 +28,14 @@ async function getBookings(searchParams?: { from?: string; to?: string; platform
     `)
     .order("checkin_date", { ascending: false });
 
+  // Support multiple platform_account_id
   if (filters.platform_account_id) {
-    bookingsQuery = bookingsQuery.eq("platform_account_id", filters.platform_account_id);
+    const accountIds = Array.isArray(filters.platform_account_id) 
+      ? filters.platform_account_id 
+      : [filters.platform_account_id];
+    if (accountIds.length > 0) {
+      bookingsQuery = bookingsQuery.in("platform_account_id", accountIds);
+    }
   }
   if (filters.unit_id) {
     bookingsQuery = bookingsQuery.eq("unit_id", filters.unit_id);
@@ -103,13 +110,18 @@ async function getBookings(searchParams?: { from?: string; to?: string; platform
   // Filter by platform_account_id for reservations (through unit)
   let combined = [...bookings, ...reservations];
   if (filters.platform_account_id) {
-    combined = combined.filter((item: any) => {
-      if (item.type === "manual") {
-        return item.platform_account_id === filters.platform_account_id;
-      } else {
-        return item.unit?.platform_account_id === filters.platform_account_id;
-      }
-    });
+    const accountIds = Array.isArray(filters.platform_account_id) 
+      ? filters.platform_account_id 
+      : [filters.platform_account_id];
+    if (accountIds.length > 0) {
+      combined = combined.filter((item: any) => {
+        if (item.type === "manual") {
+          return accountIds.includes(item.platform_account_id);
+        } else {
+          return accountIds.includes(item.unit?.platform_account_id);
+        }
+      });
+    }
   }
 
   // Sort by checkin_date
@@ -122,10 +134,16 @@ async function getBookings(searchParams?: { from?: string; to?: string; platform
   return combined;
 }
 
-function formatQuery(params: Record<string, string | undefined>) {
+function formatQuery(params: Record<string, string | string[] | undefined>) {
   const usp = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => {
-    if (v) usp.set(k, v);
+    if (v) {
+      if (Array.isArray(v)) {
+        v.forEach((val) => usp.append(k, val));
+      } else {
+        usp.set(k, v);
+      }
+    }
   });
   return usp.toString();
 }
@@ -133,18 +151,26 @@ function formatQuery(params: Record<string, string | undefined>) {
 export default async function BookingsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ from?: string; to?: string; platform_account_id?: string; unit_id?: string; platform?: PlatformExtended }> | { from?: string; to?: string; platform_account_id?: string; unit_id?: string; platform?: PlatformExtended };
+  searchParams?: Promise<{ from?: string; to?: string; platform_account_id?: string | string[]; unit_id?: string; platform?: PlatformExtended }> | { from?: string; to?: string; platform_account_id?: string | string[]; unit_id?: string; platform?: PlatformExtended };
 }) {
   const resolvedParams = searchParams instanceof Promise ? await searchParams : (searchParams || {});
+  
+  // Handle platform_account_id as array from query params
+  const platformAccountIds = resolvedParams.platform_account_id 
+    ? (Array.isArray(resolvedParams.platform_account_id) 
+        ? resolvedParams.platform_account_id 
+        : [resolvedParams.platform_account_id])
+    : [];
+  
   const { accounts, units } = await getFilters();
-  const bookings = await getBookings(resolvedParams);
+  const bookings = await getBookings({ ...resolvedParams, platform_account_id: platformAccountIds.length > 0 ? platformAccountIds : undefined });
 
   const totalAmount = bookings.reduce((sum: number, b: any) => sum + (Number(b.amount) || 0), 0);
 
   const csvLink = `/api/bookings?${formatQuery({
     from: resolvedParams.from,
     to: resolvedParams.to,
-    platform_account_id: resolvedParams.platform_account_id,
+    platform_account_id: platformAccountIds.length > 0 ? platformAccountIds : undefined,
     unit_id: resolvedParams.unit_id,
     platform: resolvedParams.platform,
     export: "csv",
@@ -172,13 +198,7 @@ export default async function BookingsPage({
             <Download className="w-4 h-4" />
             تصدير Excel (CSV)
           </Link>
-          <Link
-            href="/dashboard/bookings/new"
-            className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4" />
-            إضافة حجز
-          </Link>
+          <BookingsPageClient />
         </div>
       </div>
 
@@ -192,16 +212,26 @@ export default async function BookingsPage({
           <label className="text-gray-600">إلى</label>
           <input type="date" name="to" defaultValue={resolvedParams.to} className="border rounded px-3 py-2" />
         </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-gray-600">الحساب</label>
-          <select name="platform_account_id" defaultValue={resolvedParams.platform_account_id || ""} className="border rounded px-3 py-2">
-            <option value="">الكل</option>
-            {accounts.map((a: any) => (
-              <option key={a.id} value={a.id}>
-                {a.account_name} — {a.platform}
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-col gap-1 md:col-span-2 lg:col-span-1">
+          <label className="text-gray-600">الحسابات (يمكن اختيار أكثر من حساب)</label>
+          <div className="border rounded px-3 py-2 max-h-32 overflow-y-auto">
+            {accounts.length > 0 ? (
+              accounts.map((a: any) => (
+                <label key={a.id} className="flex items-center gap-2 py-1 cursor-pointer hover:bg-gray-50 rounded px-1">
+                  <input
+                    type="checkbox"
+                    name="platform_account_id"
+                    value={a.id}
+                    defaultChecked={platformAccountIds.includes(a.id)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">{a.account_name} — {a.platform}</span>
+                </label>
+              ))
+            ) : (
+              <p className="text-gray-400 text-sm">لا توجد حسابات</p>
+            )}
+          </div>
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-gray-600">الوحدة</label>

@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { DeleteAccountButton } from "./DeleteAccountButton";
+import { hasPermission } from "@/lib/server-permissions";
+import { AccountsPageClient } from "./AccountsPageClient";
 
 async function getAccounts() {
   const supabase = await createClient();
@@ -15,6 +17,7 @@ async function getAccounts() {
 
 export default async function AccountsPage() {
   const accounts = await getAccounts();
+  const canEdit = await hasPermission("/dashboard/accounts", "edit");
   const airbnbAccounts = accounts.filter((a) => a.platform === "airbnb");
   const gathernAccounts = accounts.filter((a) => a.platform === "gathern");
 
@@ -25,13 +28,17 @@ export default async function AccountsPage() {
           <h1 className="text-3xl font-bold text-gray-900">الحسابات</h1>
           <p className="text-gray-600 mt-1">إدارة حسابات المنصات</p>
         </div>
-        <Link
-          href="/dashboard/accounts/new"
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
-        >
-          <Plus className="w-5 h-5" />
-          <span>إضافة حساب</span>
-        </Link>
+        {canEdit ? (
+          <Link
+            href="/dashboard/accounts/new"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
+          >
+            <Plus className="w-5 h-5" />
+            <span>إضافة حساب</span>
+          </Link>
+        ) : (
+          <AccountsPageClient />
+        )}
       </div>
 
       {/* Airbnb */}
@@ -54,15 +61,17 @@ export default async function AccountsPage() {
                       {new Date(account.created_at).toLocaleDateString("ar-EG")}
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <Link
-                      href={`/dashboard/accounts/${account.id}/edit`}
-                      className="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded border border-blue-200"
-                    >
-                      تعديل
-                    </Link>
-                    <DeleteAccountButton id={account.id} name={account.account_name} />
-                  </div>
+                  {canEdit && (
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/dashboard/accounts/${account.id}/edit`}
+                        className="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded border border-blue-200"
+                      >
+                        تعديل
+                      </Link>
+                      <DeleteAccountButton id={account.id} name={account.account_name} />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -92,15 +101,17 @@ export default async function AccountsPage() {
                       {new Date(account.created_at).toLocaleDateString("ar-EG")}
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <Link
-                      href={`/dashboard/accounts/${account.id}/edit`}
-                      className="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded border border-blue-200"
-                    >
-                      تعديل
-                    </Link>
-                    <DeleteAccountButton id={account.id} name={account.account_name} />
-                  </div>
+                  {canEdit && (
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/dashboard/accounts/${account.id}/edit`}
+                        className="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded border border-blue-200"
+                      >
+                        تعديل
+                      </Link>
+                      <DeleteAccountButton id={account.id} name={account.account_name} />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

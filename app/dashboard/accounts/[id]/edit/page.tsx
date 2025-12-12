@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { use } from "react";
+import { usePermission } from "@/lib/hooks/usePermission";
 
 export default function EditAccountPage({
   params,
@@ -13,9 +14,16 @@ export default function EditAccountPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const canEdit = usePermission("edit");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [account, setAccount] = useState<any>(null);
+
+  useEffect(() => {
+    if (canEdit === false) {
+      router.push(`/dashboard/accounts?error=no_permission`);
+    }
+  }, [canEdit, router]);
 
   useEffect(() => {
     fetch(`/api/accounts/${id}`)
@@ -55,6 +63,23 @@ export default function EditAccountPage({
       setLoading(false);
     }
   };
+
+  if (canEdit === null) {
+    return <div className="text-center py-12">جاري التحميل...</div>;
+  }
+
+  if (canEdit === false) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center">
+          <p className="font-semibold mb-2">ليس لديك صلاحية لتعديل الحسابات</p>
+          <Link href="/dashboard/accounts" className="text-blue-600 hover:underline">
+            العودة للحسابات
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (!account) {
     return <div className="text-center py-12">جاري التحميل...</div>;
@@ -133,6 +158,7 @@ export default function EditAccountPage({
     </div>
   );
 }
+
 
 
 

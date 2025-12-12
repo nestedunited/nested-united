@@ -3,6 +3,8 @@ import { ArrowRight, MapPin, Users, Calendar, Wrench, AlertTriangle, CheckCircle
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { UpdateStatusButton } from "../../unit-readiness/UpdateStatusButton";
+import { hasPermission } from "@/lib/server-permissions";
+import { UnitEditButton } from "./UnitEditButton";
 
 // Status configurations
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
@@ -54,6 +56,7 @@ export default async function UnitDetailsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const canEdit = await hasPermission("/dashboard/units", "edit");
 
   let unit = null;
   try {
@@ -191,12 +194,14 @@ export default async function UnitDetailsPage({
           >
             إدارة التقويم
           </Link>
-          <Link
-            href={`/dashboard/units/${id}/edit`}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-          >
-            تعديل
-          </Link>
+          {canEdit && (
+            <Link
+              href={`/dashboard/units/${id}/edit`}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+            >
+              تعديل
+            </Link>
+          )}
         </div>
       </div>
 

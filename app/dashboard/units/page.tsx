@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { Plus, Building2, MapPin, Users } from "lucide-react";
 import Link from "next/link";
-import { DeleteUnitButton } from "./DeleteUnitButton";
+import { UnitsPageClient } from "./UnitsPageClient";
+import { UnitsDeleteButton } from "./UnitsDeleteButton";
 
 async function getUnits() {
   const supabase = await createClient();
@@ -24,13 +25,7 @@ export default async function UnitsPage() {
           <h1 className="text-3xl font-bold text-gray-900">الوحدات</h1>
           <p className="text-gray-600 mt-1">إدارة جميع الوحدات</p>
         </div>
-        <Link
-          href="/dashboard/units/new"
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-        >
-          <Plus className="w-5 h-5" />
-          <span>إضافة وحدة</span>
-        </Link>
+        <UnitsPageClient />
       </div>
 
       {/* Stats */}
@@ -78,7 +73,7 @@ export default async function UnitsPage() {
                   >
                     {unit.platform_account?.platform === "airbnb" ? "Airbnb" : "Gathern"}
                   </span>
-                  <DeleteUnitButton unitId={unit.id} unitName={unit.unit_name} />
+                  <UnitsDeleteButton unitId={unit.id} unitName={unit.unit_name} />
                 </div>
               </div>
               <Link href={`/dashboard/units/${unit.id}`}>

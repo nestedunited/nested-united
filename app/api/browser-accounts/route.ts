@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { checkUserPermission, logActivityInServer } from "@/lib/permissions";
 
 // GET all browser accounts
 export async function GET() {
@@ -32,8 +33,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (user.role !== "admin" && user.role !== "super_admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // Check permission using new permission system
+  const hasPermission = await checkUserPermission(user.id, "/dashboard/browser-accounts", "edit");
+  if (!hasPermission) {
+    return NextResponse.json({ error: "Forbidden: لا تملك صلاحية الإنشاء" }, { status: 403 });
   }
 
   const body = await request.json();
@@ -87,6 +90,17 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Log activity
+  await logActivityInServer({
+    userId: user.id,
+    action_type: "create",
+    page_path: "/dashboard/browser-accounts",
+    resource_type: "browser_account",
+    resource_id: data.id,
+    description: `إنشاء حساب متصفح جديد: ${account_name} (${platform})`,
+    metadata: { account_name, platform },
+  });
 
   return NextResponse.json(data, { status: 201 });
 }

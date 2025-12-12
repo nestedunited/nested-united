@@ -4,9 +4,18 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { usePermission } from "@/lib/hooks/usePermission";
 
 export default function NewUnitPage() {
   const router = useRouter();
+  const canEdit = usePermission("edit");
+
+  useEffect(() => {
+    if (canEdit === false) {
+      router.push("/dashboard/units?error=no_permission");
+    }
+  }, [canEdit, router]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -161,6 +170,7 @@ export default function NewUnitPage() {
     </div>
   );
 }
+
 
 
 

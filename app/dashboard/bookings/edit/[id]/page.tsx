@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, AlertCircle, Save, Loader2 } from "lucide-react";
+import { usePermission } from "@/lib/hooks/usePermission";
 
 interface UnitOption {
   id: string;
@@ -34,12 +35,19 @@ interface BookingData {
 export default function EditBookingPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
   const resolvedParams = use(params instanceof Promise ? params : Promise.resolve(params));
   const router = useRouter();
+  const canEdit = usePermission("edit");
   const [units, setUnits] = useState<UnitOption[]>([]);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [booking, setBooking] = useState<BookingData | null>(null);
+
+  useEffect(() => {
+    if (canEdit === false) {
+      router.push("/dashboard/bookings?error=no_permission");
+    }
+  }, [canEdit, router]);
 
   useEffect(() => {
     // Load units and accounts
@@ -100,10 +108,23 @@ export default function EditBookingPage({ params }: { params: Promise<{ id: stri
     }
   };
 
-  if (loading) {
+  if (canEdit === null || loading) {
     return (
       <div className="max-w-3xl mx-auto flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (canEdit === false) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center">
+          <p className="font-semibold mb-2">ليس لديك صلاحية لتعديل الحجوزات</p>
+          <Link href="/dashboard/bookings" className="text-blue-600 hover:underline">
+            العودة للحجوزات
+          </Link>
+        </div>
       </div>
     );
   }

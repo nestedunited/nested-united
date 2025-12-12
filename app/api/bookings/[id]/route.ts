@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
+import { checkUserPermission, logActivityInServer } from "@/lib/permissions";
 
 // GET /api/bookings/[id] - Get single booking
 export async function GET(
@@ -35,8 +36,14 @@ export async function PUT(
 ) {
   const supabase = createServiceClient();
   const currentUser = await getCurrentUser();
-  if (!currentUser || !isAdmin(currentUser)) {
+  if (!currentUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Check permission
+  const hasPermission = await checkUserPermission(currentUser.id, "/dashboard/bookings", "edit");
+  if (!hasPermission) {
+    return NextResponse.json({ error: "Forbidden: لا تملك صلاحية التعديل" }, { status: 403 });
   }
 
   const resolvedParams = params instanceof Promise ? await params : params;
@@ -61,6 +68,13 @@ export async function PUT(
     );
   }
 
+  // Get booking before update for logging
+  const { data: oldBooking } = await supabase
+    .from("bookings")
+    .select("guest_name")
+    .eq("id", resolvedParams.id)
+    .single();
+
   const { data, error } = await supabase
     .from("bookings")
     .update({
@@ -83,6 +97,17 @@ export async function PUT(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Log activity
+  await logActivityInServer({
+    userId: currentUser.id,
+    action_type: "update",
+    page_path: "/dashboard/bookings",
+    resource_type: "booking",
+    resource_id: resolvedParams.id,
+    description: `تحديث حجز: ${oldBooking?.guest_name || guest_name}`,
+    metadata: { booking_id: resolvedParams.id, guest_name },
+  });
+
   return NextResponse.json(data);
 }
 
@@ -93,11 +118,24 @@ export async function DELETE(
 ) {
   const supabase = createServiceClient();
   const currentUser = await getCurrentUser();
-  if (!currentUser || !isAdmin(currentUser)) {
+  if (!currentUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Check permission
+  const hasPermission = await checkUserPermission(currentUser.id, "/dashboard/bookings", "edit");
+  if (!hasPermission) {
+    return NextResponse.json({ error: "Forbidden: لا تملك صلاحية الحذف" }, { status: 403 });
+  }
+
   const resolvedParams = params instanceof Promise ? await params : params;
+
+  // Get booking before delete for logging
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("guest_name")
+    .eq("id", resolvedParams.id)
+    .single();
 
   const { error } = await supabase
     .from("bookings")
@@ -107,6 +145,17 @@ export async function DELETE(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Log activity
+  await logActivityInServer({
+    userId: currentUser.id,
+    action_type: "delete",
+    page_path: "/dashboard/bookings",
+    resource_type: "booking",
+    resource_id: resolvedParams.id,
+    description: `حذف حجز: ${booking?.guest_name || resolvedParams.id}`,
+    metadata: { booking_id: resolvedParams.id },
+  });
 
   return NextResponse.json({ success: true });
 }

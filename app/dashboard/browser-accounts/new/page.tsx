@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, AlertCircle, Monitor, Globe, CheckCircle2, MessageCircle } from "lucide-react";
 import Link from "next/link";
+import { usePermission } from "@/lib/hooks/usePermission";
 
 interface PlatformAccount {
   id: string;
@@ -13,12 +14,19 @@ interface PlatformAccount {
 
 export default function NewBrowserAccountPage() {
   const router = useRouter();
+  const canEdit = usePermission("edit");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [platformAccounts, setPlatformAccounts] = useState<PlatformAccount[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [selectedPlatform, setSelectedPlatform] = useState<string>("");
   const [mode, setMode] = useState<"platform" | "whatsapp">("platform");
+
+  useEffect(() => {
+    if (canEdit === false) {
+      router.push("/dashboard/browser-accounts?error=no_permission");
+    }
+  }, [canEdit, router]);
 
   useEffect(() => {
     // Fetch only unlinked platform accounts (not already connected to a browser account)
@@ -93,6 +101,23 @@ export default function NewBrowserAccountPage() {
 
   const airbnbAccounts = platformAccounts.filter((a) => a.platform === "airbnb");
   const gathernAccounts = platformAccounts.filter((a) => a.platform === "gathern");
+
+  if (canEdit === null) {
+    return <div className="text-center py-12">جاري التحميل...</div>;
+  }
+
+  if (canEdit === false) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center">
+          <p className="font-semibold mb-2">ليس لديك صلاحية لإضافة حسابات المتصفح</p>
+          <Link href="/dashboard/browser-accounts" className="text-blue-600 hover:underline">
+            العودة لحسابات المتصفح
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto">

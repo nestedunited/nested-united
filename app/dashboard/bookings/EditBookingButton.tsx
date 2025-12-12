@@ -2,6 +2,7 @@
 
 import { Edit } from "lucide-react";
 import Link from "next/link";
+import { usePermission } from "@/lib/hooks/usePermission";
 
 interface Booking {
   id: string;
@@ -19,8 +20,13 @@ interface EditBookingButtonProps {
 }
 
 export function EditBookingButton({ booking }: EditBookingButtonProps) {
+  const canEdit = usePermission("edit");
   const isIcal = booking.type === "ical";
   const bookingId = isIcal ? booking.id.replace("reservation-", "") : booking.id.replace("booking-", "");
+
+  if (canEdit === null || !canEdit) {
+    return null;
+  }
 
   // For iCal reservations, we can't edit them directly - they need to be converted to bookings first
   // For now, we'll show a message or redirect to a convert page

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Trash2, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { usePermission } from "@/lib/hooks/usePermission";
 
 interface Booking {
   id: string;
@@ -15,10 +16,15 @@ interface DeleteBookingButtonProps {
 }
 
 export function DeleteBookingButton({ booking }: DeleteBookingButtonProps) {
+  const canEdit = usePermission("edit");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const isIcal = booking.type === "ical";
   const bookingId = isIcal ? booking.id.replace("reservation-", "") : booking.id.replace("booking-", "");
+
+  if (canEdit === null || !canEdit) {
+    return null;
+  }
 
   const handleDelete = async () => {
     if (!confirm(`هل أنت متأكد من حذف حجز "${booking.guest_name}"؟`)) {

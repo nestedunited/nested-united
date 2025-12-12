@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Building2, Wrench, Users, LayoutDashboard, Globe, ClipboardCheck, Calendar, Info } from "lucide-react";
+import { Home, Building2, Wrench, Users, LayoutDashboard, Globe, ClipboardCheck, Calendar, Info, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { User, UserRole } from "@/lib/types/database";
 
@@ -64,6 +64,12 @@ const navItems: NavItem[] = [
     label: "المستخدمون",
     href: "/dashboard/users",
     icon: Users,
+    allowedRoles: ["super_admin"],
+  },
+  {
+    label: "سجل الأنشطة",
+    href: "/dashboard/activity-logs",
+    icon: FileText,
     allowedRoles: ["super_admin"],
   },
   {

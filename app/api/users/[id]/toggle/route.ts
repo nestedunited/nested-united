@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logActivityInServer } from "@/lib/permissions";
 
 export async function POST(
   request: NextRequest,
@@ -24,10 +25,10 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Get current user status
+  // Get current user status and name
   const { data: targetUser } = await supabase
     .from("users")
-    .select("is_active")
+    .select("is_active, name")
     .eq("id", id)
     .single();
 
@@ -35,18 +36,32 @@ export async function POST(
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
+  const newStatus = !targetUser.is_active;
+
   // Toggle status
   const { error } = await supabase
     .from("users")
-    .update({ is_active: !targetUser.is_active })
+    .update({ is_active: newStatus })
     .eq("id", id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, is_active: !targetUser.is_active });
+  // Log activity
+  await logActivityInServer({
+    userId: authUser.id,
+    action_type: "update",
+    page_path: "/dashboard/users",
+    resource_type: "user",
+    resource_id: id,
+    description: `${newStatus ? "تفعيل" : "تعطيل"} المستخدم: ${targetUser.name}`,
+    metadata: { user_id: id, is_active: newStatus },
+  });
+
+  return NextResponse.json({ success: true, is_active: newStatus });
 }
+
 
 
 

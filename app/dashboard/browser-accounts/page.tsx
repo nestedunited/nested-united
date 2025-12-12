@@ -5,6 +5,8 @@ import { DeleteBrowserAccountButton } from "./DeleteBrowserAccountButton";
 import { OpenAccountButton } from "./OpenAccountButton";
 import { TestNotificationButton } from "./TestNotificationButton";
 import { getCurrentUser } from "@/lib/auth";
+import { hasPermission } from "@/lib/server-permissions";
+import { BrowserAccountsPageClient } from "./BrowserAccountsPageClient";
 
 async function getBrowserAccounts() {
   const supabase = await createClient();
@@ -20,6 +22,7 @@ async function getBrowserAccounts() {
 
 export default async function BrowserAccountsPage() {
   const accounts = await getBrowserAccounts();
+  const canEdit = await hasPermission("/dashboard/browser-accounts", "edit");
 
   const airbnbAccounts = accounts.filter(a => a.platform === "airbnb");
   const gathernAccounts = accounts.filter(a => a.platform === "gathern");
@@ -38,13 +41,17 @@ export default async function BrowserAccountsPage() {
         </div>
         <div className="flex items-center gap-3">
           <TestNotificationButton />
-          <Link
-            href="/dashboard/browser-accounts/new"
-            className="flex items-center gap-2 bg-gradient-to-l from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-5 py-2.5 rounded-xl shadow-lg shadow-blue-500/25 transition-all"
-          >
-            <Plus className="w-5 h-5" />
-            <span>إضافة حساب</span>
-          </Link>
+          {canEdit ? (
+            <Link
+              href="/dashboard/browser-accounts/new"
+              className="flex items-center gap-2 bg-gradient-to-l from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-5 py-2.5 rounded-xl shadow-lg shadow-blue-500/25 transition-all"
+            >
+              <Plus className="w-5 h-5" />
+              <span>إضافة حساب</span>
+            </Link>
+          ) : (
+            <BrowserAccountsPageClient />
+          )}
         </div>
       </div>
 
@@ -227,10 +234,12 @@ export default async function BrowserAccountsPage() {
                       platform={account.platform}
                       partition={account.session_partition}
                     />
-                    <DeleteBrowserAccountButton
-                      accountId={account.id}
-                      accountName={account.account_name}
-                    />
+                    {canEdit && (
+                      <DeleteBrowserAccountButton
+                        accountId={account.id}
+                        accountName={account.account_name}
+                      />
+                    )}
                   </div>
                 </div>
 

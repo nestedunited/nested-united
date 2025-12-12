@@ -1,14 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { usePermission } from "@/lib/hooks/usePermission";
 
 export default function NewAccountPage() {
   const router = useRouter();
+  const canEdit = usePermission("edit");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (canEdit === false) {
+      router.push("/dashboard/accounts?error=no_permission");
+    }
+  }, [canEdit, router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -42,6 +50,23 @@ export default function NewAccountPage() {
       setLoading(false);
     }
   };
+
+  if (canEdit === null) {
+    return <div className="text-center py-12">جاري التحميل...</div>;
+  }
+
+  if (canEdit === false) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center">
+          <p className="font-semibold mb-2">ليس لديك صلاحية لإضافة الحسابات</p>
+          <Link href="/dashboard/accounts" className="text-blue-600 hover:underline">
+            العودة للحسابات
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto">
