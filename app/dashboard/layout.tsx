@@ -6,6 +6,7 @@ import { TabBar } from "@/components/layout/TabBar";
 import { ElectronNotificationHandler } from "@/components/ElectronNotificationHandler";
 import { NotificationManager } from "@/components/NotificationManager";
 import { ActivityLogger } from "@/components/ActivityLogger";
+import { AutoSync } from "@/components/AutoSync";
 
 export default async function DashboardLayout({
   children,
@@ -45,6 +46,7 @@ export default async function DashboardLayout({
       <ElectronNotificationHandler />
       <NotificationManager />
       <ActivityLogger />
+      <AutoSync />
       <Header user={user} unreadCount={unreadCount} />
       <TabBar />
       <div className="flex flex-col lg:flex-row">
