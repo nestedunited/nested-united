@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Building2, Calendar, Wrench, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
