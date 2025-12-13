@@ -138,6 +138,22 @@ function StatCard({ title, value, icon: Icon, color, link }: StatCardProps) {
 }
 
 export default async function DashboardPage() {
+  const supabase = await createClient();
+  const { data: { user: authUser } } = await supabase.auth.getUser();
+  
+  // Check user role and redirect maintenance workers to maintenance page
+  if (authUser) {
+    const { data: user } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", authUser.id)
+      .single();
+    
+    if (user?.role === "maintenance_worker") {
+      redirect("/dashboard/maintenance");
+    }
+  }
+
   const [userName, stats] = await Promise.all([
     getCurrentUserName(),
     getDashboardStats()
