@@ -47,9 +47,9 @@ export default async function DashboardLayout({
       <ActivityLogger />
       <Header user={user} unreadCount={unreadCount} />
       <TabBar />
-      <div className="flex">
+      <div className="flex flex-col lg:flex-row">
         <Sidebar user={user} />
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 p-3 sm:p-4 md:p-6">{children}</main>
       </div>
     </div>
   );

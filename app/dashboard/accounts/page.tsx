@@ -22,18 +22,18 @@ export default async function AccountsPage() {
   const gathernAccounts = accounts.filter((a) => a.platform === "gathern");
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">الحسابات</h1>
-          <p className="text-gray-600 mt-1">إدارة حسابات المنصات</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">الحسابات</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">إدارة حسابات المنصات</p>
         </div>
         {canEdit ? (
           <Link
             href="/dashboard/accounts/new"
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg transition text-sm sm:text-base w-full sm:w-auto justify-center"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>إضافة حساب</span>
           </Link>
         ) : (

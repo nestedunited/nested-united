@@ -19,28 +19,28 @@ export default async function UnitsPage() {
   const inactiveUnits = units.filter((u) => u.status === "inactive");
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">الوحدات</h1>
-          <p className="text-gray-600 mt-1">إدارة جميع الوحدات</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">الوحدات</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">إدارة جميع الوحدات</p>
         </div>
         <UnitsPageClient />
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg shadow p-4 border-r-4 border-blue-500">
-          <p className="text-gray-600 text-sm">إجمالي الوحدات</p>
-          <p className="text-3xl font-bold">{units.length}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4 border-r-4 border-blue-500">
+          <p className="text-gray-600 text-xs sm:text-sm">إجمالي الوحدات</p>
+          <p className="text-xl sm:text-2xl md:text-3xl font-bold">{units.length}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 border-r-4 border-green-500">
-          <p className="text-gray-600 text-sm">نشطة</p>
-          <p className="text-3xl font-bold">{activeUnits.length}</p>
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4 border-r-4 border-green-500">
+          <p className="text-gray-600 text-xs sm:text-sm">نشطة</p>
+          <p className="text-xl sm:text-2xl md:text-3xl font-bold">{activeUnits.length}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 border-r-4 border-gray-400">
-          <p className="text-gray-600 text-sm">غير نشطة</p>
-          <p className="text-3xl font-bold">{inactiveUnits.length}</p>
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4 border-r-4 border-gray-400">
+          <p className="text-gray-600 text-xs sm:text-sm">غير نشطة</p>
+          <p className="text-xl sm:text-2xl md:text-3xl font-bold">{inactiveUnits.length}</p>
         </div>
       </div>
 

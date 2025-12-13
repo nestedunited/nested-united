@@ -144,13 +144,13 @@ export function TabBar() {
 
   return (
     <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
-      <div className="flex items-center gap-1.5 px-3 py-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+      <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
         {tabs.map((tab) => (
           <div
             key={tab.id}
             onClick={() => handleFocusTab(tab.id)}
             className={`
-              group flex items-center gap-2.5 px-4 py-2.5 rounded-lg cursor-pointer transition-all min-w-[220px] max-w-[320px] relative
+              group flex items-center gap-1.5 sm:gap-2.5 px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 rounded-lg cursor-pointer transition-all min-w-[160px] sm:min-w-[200px] md:min-w-[220px] max-w-[280px] sm:max-w-[300px] md:max-w-[320px] relative flex-shrink-0
               ${
                 tab.isFocused
                   ? "bg-gradient-to-l from-blue-50 to-blue-100 border-2 border-blue-500 shadow-md shadow-blue-500/20"
@@ -170,17 +170,17 @@ export function TabBar() {
             
             {/* Tab Content */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className={`text-sm font-semibold truncate ${
+              <div className="flex items-center gap-1 sm:gap-1.5">
+                <span className={`text-xs sm:text-sm font-semibold truncate ${
                   tab.isFocused ? "text-blue-900" : "text-gray-900"
                 }`}>
                   {tab.accountName}
                 </span>
               </div>
-              <div className={`text-xs truncate mt-0.5 ${
+              <div className={`text-[10px] sm:text-xs truncate mt-0.5 ${
                 tab.isFocused ? "text-blue-700" : "text-gray-500"
               }`}>
-                {tab.title.length > 35 ? `${tab.title.substring(0, 35)}...` : tab.title}
+                {tab.title.length > 25 ? `${tab.title.substring(0, 25)}...` : tab.title}
               </div>
             </div>
 
@@ -227,14 +227,14 @@ export function TabBar() {
 
       {/* Quick Stats */}
       {tabs.length > 0 && (
-        <div className="px-4 py-2 bg-gradient-to-l from-gray-50 to-gray-100 border-t border-gray-200 text-xs text-gray-700 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Globe className="w-3.5 h-3.5 text-gray-500" />
-            <span className="font-medium">
-              {tabs.length} {tabs.length === 1 ? "تاب مفتوح" : "تاب مفتوح"}
+        <div className="px-2 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-l from-gray-50 to-gray-100 border-t border-gray-200 text-[10px] sm:text-xs text-gray-700 flex items-center justify-between gap-2 overflow-x-auto">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            <Globe className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-500" />
+            <span className="font-medium whitespace-nowrap">
+              {tabs.length} {tabs.length === 1 ? "تاب" : "تاب"}
             </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             {tabs.filter((t) => t.platform === "airbnb").length > 0 && (
               <span className="flex items-center gap-1.5 px-2 py-1 bg-red-50 rounded-md border border-red-200">
                 <div className="w-2.5 h-2.5 rounded-full bg-red-500" />

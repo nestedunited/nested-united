@@ -177,13 +177,13 @@ export default async function BookingsPage({
   })}`;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">الحجوزات</h1>
-          <p className="text-gray-600 mt-1">إدارة الحجوزات مع فلترة بالتواريخ والحساب والوحدة والمنصة</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">الحجوزات</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">إدارة الحجوزات مع فلترة بالتواريخ والحساب والوحدة والمنصة</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <Link
             href="/dashboard/bookings/calendar"
             className="inline-flex items-center gap-2 border border-gray-300 px-3 py-2 rounded-lg text-sm hover:bg-gray-50"
@@ -203,7 +203,7 @@ export default async function BookingsPage({
       </div>
 
       {/* Filters */}
-      <form method="get" className="bg-white border border-gray-200 rounded-lg p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 text-sm">
+      <form method="get" className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-sm">
         <div className="flex flex-col gap-1">
           <label className="text-gray-600">من</label>
           <input type="date" name="from" defaultValue={resolvedParams.from} className="border rounded px-3 py-2" />
@@ -267,14 +267,14 @@ export default async function BookingsPage({
       </form>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <p className="text-sm text-gray-500">إجمالي الحجوزات</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{bookings.length}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-500">إجمالي الحجوزات</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{bookings.length}</p>
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <p className="text-sm text-gray-500">إجمالي المبالغ</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{totalAmount.toFixed(2)} SAR</p>
+        <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-500">إجمالي المبالغ</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{totalAmount.toFixed(2)} SAR</p>
         </div>
       </div>
 

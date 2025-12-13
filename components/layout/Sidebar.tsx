@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Building2, Wrench, Users, LayoutDashboard, Globe, ClipboardCheck, Calendar, Info, FileText } from "lucide-react";
+import { useState } from "react";
+import { Home, Building2, Wrench, Users, LayoutDashboard, Globe, ClipboardCheck, Calendar, Info, FileText, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { User, UserRole } from "@/lib/types/database";
 
@@ -82,6 +83,7 @@ const navItems: NavItem[] = [
 
 export function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
+  const [isOpen, setIsOpen] = useState(false);
 
   const filteredNavItems = navItems.filter((item) => {
     // If no allowedRoles specified, all roles can see it
@@ -92,30 +94,57 @@ export function Sidebar({ user }: SidebarProps) {
   });
 
   return (
-    <aside className="w-64 bg-white border-l border-gray-200 min-h-screen p-4">
-      <nav className="space-y-2">
-        {filteredNavItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href;
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="lg:hidden fixed top-4 right-4 z-50 bg-white border border-gray-200 rounded-lg p-2 shadow-lg"
+        aria-label="Toggle menu"
+      >
+        {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+      </button>
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
-                isActive
-                  ? "bg-blue-50 text-blue-600 font-medium"
-                  : "text-gray-700 hover:bg-gray-50"
-              )}
-            >
-              <Icon className="w-5 h-5" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
+      {/* Overlay for mobile */}
+      {isOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "bg-white border-l border-gray-200 min-h-screen p-4 fixed lg:static inset-y-0 right-0 z-40 transform transition-transform duration-300 ease-in-out",
+          "w-64",
+          isOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"
+        )}
+      >
+        <nav className="space-y-2 pt-12 lg:pt-0">
+          {filteredNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setIsOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
+                  isActive
+                    ? "bg-blue-50 text-blue-600 font-medium"
+                    : "text-gray-700 hover:bg-gray-50"
+                )}
+              >
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm sm:text-base">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+    </>
   );
 }
 

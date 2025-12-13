@@ -43,38 +43,38 @@ export default async function UsersPage() {
   const workers = users.filter((u) => u.role === "maintenance_worker");
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">إدارة المستخدمين</h1>
-          <p className="text-gray-600 mt-1">إضافة وتعديل المستخدمين</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">إدارة المستخدمين</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">إضافة وتعديل المستخدمين</p>
         </div>
         <Link
           href="/dashboard/users/new"
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base w-full sm:w-auto justify-center"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
           <span>إضافة مستخدم</span>
         </Link>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow p-4 border-r-4 border-blue-500">
-          <p className="text-gray-600 text-sm">إجمالي المستخدمين</p>
-          <p className="text-3xl font-bold">{users.length}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4 border-r-4 border-blue-500">
+          <p className="text-gray-600 text-xs sm:text-sm">إجمالي المستخدمين</p>
+          <p className="text-xl sm:text-2xl md:text-3xl font-bold">{users.length}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 border-r-4 border-purple-500">
-          <p className="text-gray-600 text-sm">مدراء عامون</p>
-          <p className="text-3xl font-bold">{superAdmins.length}</p>
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4 border-r-4 border-purple-500">
+          <p className="text-gray-600 text-xs sm:text-sm">مدراء عامون</p>
+          <p className="text-xl sm:text-2xl md:text-3xl font-bold">{superAdmins.length}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 border-r-4 border-green-500">
-          <p className="text-gray-600 text-sm">موظفون</p>
-          <p className="text-3xl font-bold">{admins.length}</p>
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4 border-r-4 border-green-500">
+          <p className="text-gray-600 text-xs sm:text-sm">موظفون</p>
+          <p className="text-xl sm:text-2xl md:text-3xl font-bold">{admins.length}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 border-r-4 border-orange-500">
-          <p className="text-gray-600 text-sm">عمال صيانة</p>
-          <p className="text-3xl font-bold">{workers.length}</p>
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4 border-r-4 border-orange-500">
+          <p className="text-gray-600 text-xs sm:text-sm">عمال صيانة</p>
+          <p className="text-xl sm:text-2xl md:text-3xl font-bold">{workers.length}</p>
         </div>
       </div>
 
@@ -103,7 +103,7 @@ export default async function UsersPage() {
                   <p className="text-gray-600 text-sm">{user.email}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
                 <EditUserButton 
                   userId={user.id} 
                   userName={user.name} 
