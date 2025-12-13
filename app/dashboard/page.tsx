@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Building2, Calendar, Wrench, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { SyncStatus } from "@/components/SyncStatus";
 import { SyncButton } from "./SyncButton";
 
 async function getDashboardStats() {
@@ -203,71 +204,10 @@ export default async function DashboardPage() {
       </div>
 
       {/* Sync Section */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">
-              مزامنة التقويمات (iCal)
-            </h2>
-            <p className="text-gray-500 text-sm mt-1">
-              {stats.calendarsCount} رابط تقويم مُعد
-            </p>
-          </div>
-          <SyncButton />
-        </div>
-
-        {stats.lastSync ? (
-          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-gray-600">آخر مزامنة:</span>
-              <span className="font-medium">
-                {new Date(stats.lastSync.run_at).toLocaleString("ar-EG")}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-600">الحالة:</span>
-              <span
-                className={`px-2 py-1 rounded text-sm font-medium ${
-                  stats.lastSync.status === "success"
-                    ? "bg-green-100 text-green-700"
-                    : stats.lastSync.status === "partial"
-                    ? "bg-yellow-100 text-yellow-700"
-                    : "bg-red-100 text-red-700"
-                }`}
-              >
-                {stats.lastSync.status === "success"
-                  ? "✓ نجحت"
-                  : stats.lastSync.status === "partial"
-                  ? "⚠ جزئية"
-                  : "✗ فشلت"}
-              </span>
-            </div>
-            {stats.lastSync.message && (
-              <div className="flex items-center gap-2">
-                <span className="text-gray-600">الرسالة:</span>
-                <span className="text-sm">{stats.lastSync.message}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-4 text-sm text-gray-500">
-              <span>وحدات: {stats.lastSync.units_processed || 0}</span>
-              {stats.lastSync.errors_count > 0 && (
-                <span className="text-red-600">أخطاء: {stats.lastSync.errors_count}</span>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <p className="text-yellow-700">
-              ⚠ لم يتم تشغيل المزامنة بعد. اضغط &quot;مزامنة الآن&quot; لبدء المزامنة.
-            </p>
-            {stats.calendarsCount === 0 && (
-              <p className="text-yellow-600 text-sm mt-2">
-                تحتاج أولاً إضافة روابط iCal للوحدات من صفحة الوحدات.
-              </p>
-            )}
-          </div>
-        )}
-      </div>
+      <SyncStatus 
+        initialLastSync={stats.lastSync} 
+        calendarsCount={stats.calendarsCount} 
+      />
 
       {/* Quick Actions */}
       <div className="bg-white rounded-lg shadow p-6">

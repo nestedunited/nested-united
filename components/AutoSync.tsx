@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 /**
  * AutoSync component - Automatically syncs calendars every 10-12 minutes
  * Runs silently in the background without showing UI feedback
  */
 export function AutoSync() {
+  const router = useRouter();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastSyncRef = useRef<number>(0);
 
@@ -32,6 +34,8 @@ export function AutoSync() {
 
         if (data.success) {
           console.log("[AutoSync] ✅ Sync completed:", data.message);
+          // Refresh the page to update dashboard stats
+          router.refresh();
         } else {
           console.error("[AutoSync] ❌ Sync failed:", data.error);
         }
@@ -73,8 +77,9 @@ export function AutoSync() {
         clearTimeout(intervalRef.current);
       }
     };
-  }, []);
+  }, [router]);
 
   return null; // This component doesn't render anything
 }
+
 
