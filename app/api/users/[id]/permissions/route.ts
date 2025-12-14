@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { logActivityInServer } from "@/lib/permissions";
+import { logActivityInServer, clearPermissionCacheForUser } from "@/lib/permissions";
 
 // Get user permissions
 export async function GET(
@@ -105,6 +105,9 @@ export async function PUT(
       return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
   }
+
+  // Clear permission cache for this user to ensure changes take effect immediately
+  clearPermissionCacheForUser(id);
 
   // Log activity
   await logActivityInServer({

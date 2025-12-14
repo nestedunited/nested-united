@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { X, Globe, Maximize2, RefreshCw } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 interface Tab {
   id: string;
@@ -27,6 +28,39 @@ const platformColors = {
 export function TabBar() {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [isElectron, setIsElectron] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+
+  // Check permission for browser accounts page
+  useEffect(() => {
+    const checkPermission = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        
+        if (!authUser) {
+          setHasPermission(false);
+          return;
+        }
+
+        // Check permission via API
+        const response = await fetch(
+          `/api/permissions/check?page_path=${encodeURIComponent("/dashboard/browser-accounts")}&action=view`
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          setHasPermission(data.hasPermission || false);
+        } else {
+          setHasPermission(false);
+        }
+      } catch (error) {
+        console.error("Error checking permission:", error);
+        setHasPermission(false);
+      }
+    };
+
+    checkPermission();
+  }, []);
 
   const loadTabs = useCallback(async () => {
     if (!window.electronAPI) return;
@@ -137,8 +171,12 @@ export function TabBar() {
     };
   }, [loadTabs, handleFocusTab]);
 
-  // Don't show tab bar if not in Electron or no tabs
-  if (!isElectron || tabs.length === 0) {
+  // Don't show tab bar if:
+  // 1. Not in Electron
+  // 2. No tabs open
+  // 3. User doesn't have permission to view browser accounts
+  // 4. Still checking permission
+  if (!isElectron || tabs.length === 0 || hasPermission === false || hasPermission === null) {
     return null;
   }
 

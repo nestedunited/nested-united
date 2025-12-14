@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { FileText, Filter, Download, User, Calendar, Eye } from "lucide-react";
 import Link from "next/link";
+import { usePermission } from "@/lib/hooks/usePermission";
 
 interface ActivityLog {
   id: string;
@@ -27,46 +28,30 @@ interface ActivityLog {
 
 export default function ActivityLogsPage() {
   const router = useRouter();
+  const hasViewPermission = usePermission("view");
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [users, setUsers] = useState<Array<{ id: string; name: string; email: string }>>([]);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
-    checkAccess();
-    loadUsers();
-  }, []);
-
-  useEffect(() => {
-    if (isSuperAdmin) {
-      loadLogs();
-    }
-  }, [page, selectedUserId, isSuperAdmin]);
-
-  const checkAccess = async () => {
-    const supabase = createClient();
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (!authUser) {
-      router.push("/login");
-      return;
-    }
-
-    const { data: user } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", authUser.id)
-      .single();
-
-    if (user?.role !== "super_admin") {
+    if (hasViewPermission === false) {
       router.push("/dashboard");
       return;
     }
+    if (hasViewPermission === true) {
+      loadUsers();
+      loadLogs();
+    }
+  }, [hasViewPermission, router]);
 
-    setIsSuperAdmin(true);
-  };
+  useEffect(() => {
+    if (hasViewPermission === true) {
+      loadLogs();
+    }
+  }, [page, selectedUserId, hasViewPermission]);
 
   const loadUsers = async () => {
     const supabase = createClient();
@@ -152,7 +137,7 @@ export default function ActivityLogsPage() {
     link.click();
   };
 
-  if (!isSuperAdmin) {
+  if (hasViewPermission === null || hasViewPermission === false) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p className="text-gray-500">جارٍ التحميل...</p>

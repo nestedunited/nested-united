@@ -23,6 +23,7 @@ const AVAILABLE_PAGES = [
   { path: "/dashboard/bookings", label: "الحجوزات" },
   { path: "/dashboard/maintenance", label: "الصيانة" },
   { path: "/dashboard/browser-accounts", label: "حسابات المتصفح" },
+  { path: "/dashboard/activity-logs", label: "سجل الأنشطة" },
 ];
 
 export function EditPermissionsButton({ userId, userName }: EditPermissionsButtonProps) {
