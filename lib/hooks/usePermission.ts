@@ -7,6 +7,18 @@ import { usePathname } from "next/navigation";
 const permissionCache = new Map<string, { hasPermission: boolean; timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+// Clear permission cache (called when permissions are updated)
+export function clearPermissionCache() {
+  permissionCache.clear();
+}
+
+// Listen for permission updates
+if (typeof window !== "undefined") {
+  window.addEventListener("permissions-updated", () => {
+    clearPermissionCache();
+  });
+}
+
 export function usePermission(action: "view" | "edit") {
   const pathname = usePathname();
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
