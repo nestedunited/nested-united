@@ -161,9 +161,17 @@ export default async function UnitReadinessPage({
                       <p className="text-sm text-gray-600">رمز: {unit.unit_code}</p>
                     )}
                     {unit.platform_account && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        منصة: {unit.platform_account.account_name}
-                      </p>
+                      <div className="mt-2">
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-medium ${
+                            unit.platform_account.platform === "airbnb"
+                              ? "bg-red-100 text-red-700 border border-red-300"
+                              : "bg-green-100 text-green-700 border border-green-300"
+                          }`}
+                        >
+                          {unit.platform_account.platform === "airbnb" ? "🏠 Airbnb" : "💬 Gathern"}
+                        </span>
+                      </div>
                     )}
                   </div>
 

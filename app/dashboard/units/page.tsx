@@ -3,6 +3,7 @@ import { Plus, Building2, MapPin, Users } from "lucide-react";
 import Link from "next/link";
 import { UnitsPageClient } from "./UnitsPageClient";
 import { UnitsDeleteButton } from "./UnitsDeleteButton";
+import { UnitsFilter } from "./UnitsFilter";
 
 async function getUnits() {
   const supabase = await createClient();
@@ -13,10 +14,43 @@ async function getUnits() {
   return data || [];
 }
 
-export default async function UnitsPage() {
-  const units = await getUnits();
-  const activeUnits = units.filter((u) => u.status === "active");
-  const inactiveUnits = units.filter((u) => u.status === "inactive");
+export default async function UnitsPage({
+  searchParams,
+}: {
+  searchParams: { status?: string; platform?: string; search?: string };
+}) {
+  const allUnits = await getUnits();
+  
+  // Apply filters
+  let units = allUnits;
+  
+  if (searchParams.status && searchParams.status !== "all") {
+    units = units.filter((u) => u.status === searchParams.status);
+  }
+  
+  if (searchParams.platform && searchParams.platform !== "all") {
+    units = units.filter((u) => {
+      const platform = u.platform_account?.platform?.toLowerCase();
+      return platform === searchParams.platform?.toLowerCase();
+    });
+  }
+  
+  if (searchParams.search) {
+    const searchLower = searchParams.search.toLowerCase();
+    units = units.filter((u) => {
+      const nameMatch = u.unit_name?.toLowerCase().includes(searchLower);
+      const codeMatch = u.unit_code?.toLowerCase().includes(searchLower);
+      return nameMatch || codeMatch;
+    });
+  }
+  
+  const activeUnits = allUnits.filter((u) => u.status === "active");
+  const inactiveUnits = allUnits.filter((u) => u.status === "inactive");
+  
+  const hasActiveFilters = 
+    (searchParams.status && searchParams.status !== "all") ||
+    (searchParams.platform && searchParams.platform !== "all") ||
+    (searchParams.search && searchParams.search !== "");
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -32,7 +66,7 @@ export default async function UnitsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <div className="bg-white rounded-lg shadow p-3 sm:p-4 border-r-4 border-blue-500">
           <p className="text-gray-600 text-xs sm:text-sm">إجمالي الوحدات</p>
-          <p className="text-xl sm:text-2xl md:text-3xl font-bold">{units.length}</p>
+          <p className="text-xl sm:text-2xl md:text-3xl font-bold">{allUnits.length}</p>
         </div>
         <div className="bg-white rounded-lg shadow p-3 sm:p-4 border-r-4 border-green-500">
           <p className="text-gray-600 text-xs sm:text-sm">نشطة</p>
@@ -43,6 +77,16 @@ export default async function UnitsPage() {
           <p className="text-xl sm:text-2xl md:text-3xl font-bold">{inactiveUnits.length}</p>
         </div>
       </div>
+
+      {/* Filter */}
+      <UnitsFilter />
+
+      {/* Results Count */}
+      {hasActiveFilters && (
+        <div className="text-sm text-gray-600">
+          عرض {units.length} من {allUnits.length} وحدة
+        </div>
+      )}
 
       {/* Units Grid */}
       {units.length > 0 ? (
