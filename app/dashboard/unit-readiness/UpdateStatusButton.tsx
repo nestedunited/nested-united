@@ -12,6 +12,7 @@ const STATUS_OPTIONS = [
   { value: "cleaning_in_progress", label: "قيد التنظيف", icon: "🧹" },
   { value: "ready", label: "جاهزة للتسكين", icon: "✅" },
   { value: "occupied", label: "تم التسكين", icon: "🏠" },
+  { value: "booked", label: "إشغال", icon: "📅" },
 ];
 
 export function UpdateStatusButton({ unit, currentStatus }: { unit: any; currentStatus: string }) {

@@ -2,32 +2,80 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Filter, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 export function UnitsFilter() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isOpen, setIsOpen] = useState(false);
+  const urlSearch = searchParams.get("search") || "";
+  const [searchQuery, setSearchQuery] = useState(urlSearch);
+  const isInitialMount = useRef(true);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const statusFilter = searchParams.get("status") || "all";
   const platformFilter = searchParams.get("platform") || "all";
-  const searchQuery = searchParams.get("search") || "";
 
   const hasActiveFilters = statusFilter !== "all" || platformFilter !== "all" || searchQuery !== "";
 
-  const updateFilter = (key: string, value: string) => {
+  // Sync search query with URL params (only on mount or external URL changes)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    // Only update if URL changed externally (not from our own updates)
+    if (urlSearch !== searchQuery) {
+      setSearchQuery(urlSearch);
+    }
+  }, [urlSearch]);
+
+  const updateFilter = useCallback((key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (value === "all" || value === "") {
       params.delete(key);
     } else {
       params.set(key, value);
     }
-    router.push(`/dashboard/units?${params.toString()}`);
-  };
+    const queryString = params.toString();
+    const url = `/dashboard/units${queryString ? `?${queryString}` : ""}`;
+    router.replace(url);
+    router.refresh();
+  }, [router, searchParams]);
 
-  const clearFilters = () => {
-    router.push("/dashboard/units");
-  };
+  const clearFilters = useCallback(() => {
+    setSearchQuery("");
+    router.replace("/dashboard/units");
+    router.refresh();
+  }, [router]);
+
+  // Debounced search
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (searchQuery === "") {
+        params.delete("search");
+      } else {
+        params.set("search", searchQuery);
+      }
+      const queryString = params.toString();
+      const currentSearch = searchParams.get("search") || "";
+      if (searchQuery !== currentSearch) {
+        const url = `/dashboard/units${queryString ? `?${queryString}` : ""}`;
+        router.replace(url);
+        router.refresh();
+      }
+    }, 500);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery, router, searchParams]);
 
   return (
     <div className="bg-white rounded-lg shadow p-4 space-y-4">
@@ -88,7 +136,7 @@ export function UnitsFilter() {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => updateFilter("search", e.target.value)}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="ابحث بالاسم أو الكود..."
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />

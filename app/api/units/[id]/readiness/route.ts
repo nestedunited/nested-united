@@ -73,6 +73,7 @@ export async function PUT(
       "cleaning_in_progress",
       "ready",
       "occupied",
+      "booked",
     ];
 
     if (!status || !validStatuses.includes(status)) {

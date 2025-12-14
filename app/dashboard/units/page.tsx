@@ -17,26 +17,27 @@ async function getUnits() {
 export default async function UnitsPage({
   searchParams,
 }: {
-  searchParams: { status?: string; platform?: string; search?: string };
+  searchParams?: Promise<{ status?: string; platform?: string; search?: string }> | { status?: string; platform?: string; search?: string };
 }) {
+  const resolvedParams = searchParams instanceof Promise ? await searchParams : (searchParams || {});
   const allUnits = await getUnits();
   
   // Apply filters
   let units = allUnits;
   
-  if (searchParams.status && searchParams.status !== "all") {
-    units = units.filter((u) => u.status === searchParams.status);
+  if (resolvedParams.status && resolvedParams.status !== "all") {
+    units = units.filter((u) => u.status === resolvedParams.status);
   }
   
-  if (searchParams.platform && searchParams.platform !== "all") {
+  if (resolvedParams.platform && resolvedParams.platform !== "all") {
     units = units.filter((u) => {
       const platform = u.platform_account?.platform?.toLowerCase();
-      return platform === searchParams.platform?.toLowerCase();
+      return platform === resolvedParams.platform?.toLowerCase();
     });
   }
   
-  if (searchParams.search) {
-    const searchLower = searchParams.search.toLowerCase();
+  if (resolvedParams.search) {
+    const searchLower = resolvedParams.search.toLowerCase();
     units = units.filter((u) => {
       const nameMatch = u.unit_name?.toLowerCase().includes(searchLower);
       const codeMatch = u.unit_code?.toLowerCase().includes(searchLower);
@@ -48,9 +49,9 @@ export default async function UnitsPage({
   const inactiveUnits = allUnits.filter((u) => u.status === "inactive");
   
   const hasActiveFilters = 
-    (searchParams.status && searchParams.status !== "all") ||
-    (searchParams.platform && searchParams.platform !== "all") ||
-    (searchParams.search && searchParams.search !== "");
+    (resolvedParams.status && resolvedParams.status !== "all") ||
+    (resolvedParams.platform && resolvedParams.platform !== "all") ||
+    (resolvedParams.search && resolvedParams.search !== "");
 
   return (
     <div className="space-y-4 sm:space-y-6">

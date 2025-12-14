@@ -41,6 +41,11 @@ const STATUS_CONFIG = {
     color: "bg-gray-100 text-gray-800 border-gray-300",
     icon: "🏠",
   },
+  booked: {
+    label: "إشغال",
+    color: "bg-indigo-100 text-indigo-800 border-indigo-300",
+    icon: "📅",
+  },
 };
 
 async function getUnitsWithReadiness(statusFilter?: string | null) {
@@ -80,9 +85,10 @@ async function getUnitsWithReadiness(statusFilter?: string | null) {
 export default async function UnitReadinessPage({
   searchParams,
 }: {
-  searchParams: { status?: string };
+  searchParams?: Promise<{ status?: string }> | { status?: string };
 }) {
-  const units = await getUnitsWithReadiness(searchParams.status);
+  const resolvedParams = searchParams instanceof Promise ? await searchParams : (searchParams || {});
+  const units = await getUnitsWithReadiness(resolvedParams.status);
 
   // Calculate statistics
   const stats = {
@@ -93,6 +99,7 @@ export default async function UnitReadinessPage({
     ready: units.filter((u: any) => u.readiness_status === "ready").length,
     occupied: units.filter((u: any) => u.readiness_status === "occupied").length,
     guest_not_checked_out: units.filter((u: any) => u.readiness_status === "guest_not_checked_out").length,
+    booked: units.filter((u: any) => u.readiness_status === "booked").length,
   };
 
   return (
@@ -106,7 +113,7 @@ export default async function UnitReadinessPage({
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
         {Object.entries(STATUS_CONFIG).map(([key, config]) => (
           <div
             key={key}
@@ -122,7 +129,7 @@ export default async function UnitReadinessPage({
       </div>
 
       {/* Status Filter */}
-      <StatusFilterButtons currentStatus={searchParams.status} />
+      <StatusFilterButtons currentStatus={resolvedParams.status} />
 
       {/* Units Grid */}
       {units.length === 0 ? (
