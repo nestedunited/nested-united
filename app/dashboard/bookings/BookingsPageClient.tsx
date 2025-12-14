@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePermission } from "@/lib/hooks/usePermission";
 
 export function BookingsPageClient() {
-  const canEdit = usePermission("edit");
+  // Check edit permission specifically for bookings page
+  const canEdit = usePermission("edit", "/dashboard/bookings");
 
   if (canEdit === null || !canEdit) {
     return null;

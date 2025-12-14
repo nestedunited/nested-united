@@ -20,7 +20,8 @@ interface EditBookingButtonProps {
 }
 
 export function EditBookingButton({ booking }: EditBookingButtonProps) {
-  const canEdit = usePermission("edit");
+  // Check edit permission specifically for bookings page
+  const canEdit = usePermission("edit", "/dashboard/bookings");
   const isIcal = booking.type === "ical";
   const bookingId = isIcal ? booking.id.replace("reservation-", "") : booking.id.replace("booking-", "");
 

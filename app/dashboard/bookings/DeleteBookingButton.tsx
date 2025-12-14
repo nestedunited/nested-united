@@ -16,7 +16,8 @@ interface DeleteBookingButtonProps {
 }
 
 export function DeleteBookingButton({ booking }: DeleteBookingButtonProps) {
-  const canEdit = usePermission("edit");
+  // Check edit permission specifically for bookings page
+  const canEdit = usePermission("edit", "/dashboard/bookings");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const isIcal = booking.type === "ical";

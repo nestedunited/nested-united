@@ -20,7 +20,8 @@ interface AccountOption {
 
 export default function NewBookingPage() {
   const router = useRouter();
-  const canEdit = usePermission("edit");
+  // Check edit permission specifically for bookings page
+  const canEdit = usePermission("edit", "/dashboard/bookings");
 
   useEffect(() => {
     if (canEdit === false) {

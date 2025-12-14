@@ -19,22 +19,25 @@ if (typeof window !== "undefined") {
   });
 }
 
-export function usePermission(action: "view" | "edit") {
+export function usePermission(action: "view" | "edit", pagePath?: string) {
   const pathname = usePathname();
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
+  // Use provided pagePath or fallback to current pathname
+  const targetPath = pagePath || pathname;
+
   useEffect(() => {
     checkPermission();
-  }, [pathname, action]);
+  }, [targetPath, action]);
 
   const checkPermission = async () => {
-    if (!pathname) {
+    if (!targetPath) {
       setHasPermission(false);
       return;
     }
 
     // Check cache first
-    const cacheKey = `${pathname}:${action}`;
+    const cacheKey = `${targetPath}:${action}`;
     const cached = permissionCache.get(cacheKey);
     const now = Date.now();
 
@@ -45,7 +48,7 @@ export function usePermission(action: "view" | "edit") {
 
     try {
       const response = await fetch(
-        `/api/permissions/check?page_path=${encodeURIComponent(pathname)}&action=${action}`
+        `/api/permissions/check?page_path=${encodeURIComponent(targetPath)}&action=${action}`
       );
       if (response.ok) {
         const data = await response.json();

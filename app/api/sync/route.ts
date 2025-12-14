@@ -28,6 +28,7 @@ async function parseICalUrl(url: string): Promise<ParsedEvent[]> {
 
     const events: ParsedEvent[] = [];
 
+    // Import all events from iCal (old and new) - no date filtering
     for (const vevent of vevents) {
       const event = new ICAL.Event(vevent);
       
@@ -81,13 +82,16 @@ export async function POST() {
     }
 
     // Process each calendar
+    // Import ALL reservations from iCal (old and new) - no automatic deletion
+    // Reservations can only be deleted manually by users with permission
     for (const calendar of calendars) {
       try {
         console.log(`Syncing: ${calendar.unit.unit_name} (${calendar.platform})`);
 
         const events = await parseICalUrl(calendar.ical_url);
 
-        // Upsert events as reservations
+        // Upsert events as reservations (add new or update existing)
+        // No automatic deletion - reservations are only deleted manually
         for (const event of events) {
           const { error: upsertError } = await supabase
             .from("reservations")

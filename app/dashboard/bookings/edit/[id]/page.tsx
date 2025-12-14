@@ -35,7 +35,8 @@ interface BookingData {
 export default function EditBookingPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
   const resolvedParams = use(params instanceof Promise ? params : Promise.resolve(params));
   const router = useRouter();
-  const canEdit = usePermission("edit");
+  // Check edit permission specifically for bookings page
+  const canEdit = usePermission("edit", "/dashboard/bookings");
   const [units, setUnits] = useState<UnitOption[]>([]);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [loading, setLoading] = useState(true);
