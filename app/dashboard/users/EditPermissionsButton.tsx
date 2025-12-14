@@ -76,6 +76,10 @@ export function EditPermissionsButton({ userId, userName }: EditPermissionsButto
 
       if (response.ok) {
         setIsOpen(false);
+        // Clear client-side permission caches
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("permissions-updated"));
+        }
         router.refresh();
         alert("تم حفظ الصلاحيات بنجاح");
       } else {

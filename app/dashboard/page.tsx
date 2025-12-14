@@ -143,15 +143,25 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user: authUser } } = await supabase.auth.getUser();
   
-  // Check user role and redirect maintenance workers to maintenance page
-  if (authUser) {
-    const { data: user } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", authUser.id)
-      .single();
+  if (!authUser) {
+    redirect("/login");
+  }
+
+  // Check if user has permission to view dashboard
+  const { data: user } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", authUser.id)
+    .single();
+
+  // For maintenance workers, check if they have permission to view dashboard
+  // If not, redirect to maintenance page (default)
+  if (user?.role === "maintenance_worker") {
+    const { checkUserPermission } = await import("@/lib/permissions");
+    const hasDashboardPermission = await checkUserPermission(authUser.id, "/dashboard", "view");
     
-    if (user?.role === "maintenance_worker") {
+    if (!hasDashboardPermission) {
+      // No permission for dashboard, redirect to maintenance (default access)
       redirect("/dashboard/maintenance");
     }
   }
