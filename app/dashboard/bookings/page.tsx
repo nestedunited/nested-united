@@ -165,6 +165,9 @@ export default async function BookingsPage({
   const { accounts, units } = await getFilters();
   const bookings = await getBookings({ ...resolvedParams, platform_account_id: platformAccountIds.length > 0 ? platformAccountIds : undefined });
 
+  // Count bookings by type
+  const manualBookings = bookings.filter((b: any) => b.type === "manual").length;
+  const icalBookings = bookings.filter((b: any) => b.type === "ical").length;
   const totalAmount = bookings.reduce((sum: number, b: any) => sum + (Number(b.amount) || 0), 0);
 
   const csvLink = `/api/bookings?${formatQuery({
@@ -267,10 +270,18 @@ export default async function BookingsPage({
       </form>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4">
           <p className="text-xs sm:text-sm text-gray-500">إجمالي الحجوزات</p>
           <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{bookings.length}</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-500">يدوية</p>
+          <p className="text-xl sm:text-2xl font-bold text-blue-600 mt-1">{manualBookings}</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-500">من iCal</p>
+          <p className="text-xl sm:text-2xl font-bold text-green-600 mt-1">{icalBookings}</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4">
           <p className="text-xs sm:text-sm text-gray-500">إجمالي المبالغ</p>
