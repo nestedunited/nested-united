@@ -5,6 +5,17 @@ import type { UserRole } from "@/lib/types/database";
 const serverPermissionCache = new Map<string, { result: boolean; timestamp: number }>();
 const SERVER_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
 
+// Clear cache for a specific user (called when permissions are updated)
+export function clearPermissionCacheForUser(userId: string) {
+  const keysToDelete: string[] = [];
+  for (const key of serverPermissionCache.keys()) {
+    if (key.startsWith(`${userId}:`)) {
+      keysToDelete.push(key);
+    }
+  }
+  keysToDelete.forEach((key) => serverPermissionCache.delete(key));
+}
+
 export async function checkUserPermission(
   userId: string,
   pagePath: string,
@@ -50,11 +61,26 @@ export async function checkUserPermission(
     return true;
   }
 
-  // Maintenance workers can only view/edit maintenance page
+  // For maintenance workers, check permissions table first
+  // If a permission exists in the database, use it
+  // Otherwise, default to maintenance page only
   if (user.role === "maintenance_worker") {
-    const result = pagePath === "/dashboard/maintenance";
-    serverPermissionCache.set(cacheKey, { result, timestamp: now });
-    return result;
+    if (permission) {
+      // Permission exists in database, use it
+      let result: boolean;
+      if (action === "view") {
+        result = permission.can_view;
+      } else {
+        result = permission.can_edit && permission.can_view;
+      }
+      serverPermissionCache.set(cacheKey, { result, timestamp: now });
+      return result;
+    } else {
+      // No permission in database, use default: only maintenance page
+      const result = pagePath === "/dashboard/maintenance";
+      serverPermissionCache.set(cacheKey, { result, timestamp: now });
+      return result;
+    }
   }
 
   // For admins, check permissions table
