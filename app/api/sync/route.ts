@@ -92,7 +92,25 @@ export async function POST() {
 
         // Upsert events as reservations (add new or update existing)
         // No automatic deletion - reservations are only deleted manually
+        // IMPORTANT: Skip reservations that were manually edited to preserve user changes
         for (const event of events) {
+          // Check if reservation already exists and was manually edited
+          const { data: existingReservation } = await supabase
+            .from("reservations")
+            .select("id, is_manually_edited")
+            .eq("unit_id", calendar.unit_id)
+            .eq("platform", calendar.platform)
+            .eq("start_date", event.start)
+            .eq("end_date", event.end)
+            .maybeSingle();
+
+          // Skip if reservation was manually edited (preserve user changes)
+          if (existingReservation?.is_manually_edited) {
+            console.log(`Skipping manually edited reservation: ${calendar.unit.unit_name} (${event.start} - ${event.end})`);
+            continue;
+          }
+
+          // Upsert only if not manually edited
           const { error: upsertError } = await supabase
             .from("reservations")
             .upsert(
@@ -104,6 +122,8 @@ export async function POST() {
                 summary: event.summary,
                 raw_event: event,
                 last_synced_at: new Date().toISOString(),
+                // Preserve is_manually_edited flag if it exists
+                is_manually_edited: existingReservation?.is_manually_edited || false,
               },
               {
                 onConflict: "unit_id,platform,start_date,end_date",
