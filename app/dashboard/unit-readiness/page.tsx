@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { Building2, Calendar, User, Filter } from "lucide-react";
 import Link from "next/link";
 import { UpdateStatusButton } from "./UpdateStatusButton";
@@ -70,12 +71,46 @@ async function getUnitsWithReadiness(statusFilter?: string | null) {
 
     if (!units) return [];
 
-    // Filter by status if provided
-    if (statusFilter && statusFilter !== "all") {
-      return units.filter((unit: any) => unit.readiness_status === statusFilter);
+    // Group units by a logical key to avoid duplicates in readiness view.
+    // - أولاً حسب readiness_group_id (لو تم دمج الوحدات يدوياً)
+    // - ثم حسب unit_code إذا كانت موجودة
+    // - وإلا حسب اسم الوحدة
+    // - وأخيراً نستخدم id كاحتياط
+    const grouped = new Map<
+      string,
+      {
+        primary: any;
+        units: any[];
+      }
+    >();
+
+    for (const unit of units) {
+      const key =
+        (unit.readiness_group_id as string | null) ||
+        (unit.unit_code as string | null) ||
+        (unit.unit_name as string | null) ||
+        (unit.id as string);
+
+      const existing = grouped.get(key);
+      if (!existing) {
+        grouped.set(key, { primary: unit, units: [unit] });
+      } else {
+        existing.units.push(unit);
+      }
     }
 
-    return units;
+    // نبني كائن واحد يمثل المجموعة مع الاحتفاظ بكل الوحدات المدموجة في حقل خاص
+    let uniqueUnits = Array.from(grouped.values()).map(({ primary, units }) => ({
+      ...primary,
+      _merged_units: units,
+    }));
+
+    // Filter by status if provided
+    if (statusFilter && statusFilter !== "all") {
+      uniqueUnits = uniqueUnits.filter((unit: any) => unit.readiness_status === statusFilter);
+    }
+
+    return uniqueUnits;
   } catch (err: any) {
     console.error("[Unit Readiness] Unexpected error:", err?.message || err);
     return [];
@@ -88,7 +123,12 @@ export default async function UnitReadinessPage({
   searchParams?: Promise<{ status?: string }> | { status?: string };
 }) {
   const resolvedParams = searchParams instanceof Promise ? await searchParams : (searchParams || {});
-  const units = await getUnitsWithReadiness(resolvedParams.status);
+  const [currentUser, units] = await Promise.all([
+    getCurrentUser(),
+    getUnitsWithReadiness(resolvedParams.status),
+  ]);
+
+  const isSuperAdmin = currentUser?.role === "super_admin";
 
   // Calculate statistics
   const stats = {
@@ -110,6 +150,15 @@ export default async function UnitReadinessPage({
           <h1 className="text-3xl font-bold text-gray-900">جاهزية الوحدات</h1>
           <p className="text-gray-600 mt-1">متابعة حالة الوحدات والتنظيف</p>
         </div>
+        {isSuperAdmin && (
+          <Link
+            href="/dashboard/unit-readiness/merge"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white text-sm hover:bg-purple-700 transition-colors"
+          >
+            <Filter className="w-4 h-4" />
+            دمج وحدات
+          </Link>
+        )}
       </div>
 
       {/* Statistics Cards */}
@@ -142,6 +191,14 @@ export default async function UnitReadinessPage({
           {units.map((unit: any) => {
             const status = unit.readiness_status || "ready";
             const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG];
+            const mergedUnits: any[] = unit._merged_units || [unit];
+            const platforms = Array.from(
+              new Set(
+                mergedUnits
+                  .map((u) => u.platform_account?.platform)
+                  .filter(Boolean)
+              )
+            );
 
             return (
               <div
@@ -167,17 +224,26 @@ export default async function UnitReadinessPage({
                     {unit.unit_code && (
                       <p className="text-sm text-gray-600">رمز: {unit.unit_code}</p>
                     )}
-                    {unit.platform_account && (
-                      <div className="mt-2">
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${
-                            unit.platform_account.platform === "airbnb"
-                              ? "bg-red-100 text-red-700 border border-red-300"
-                              : "bg-green-100 text-green-700 border border-green-300"
-                          }`}
-                        >
-                          {unit.platform_account.platform === "airbnb" ? "🏠 Airbnb" : "💬 Gathern"}
-                        </span>
+                    {/* Platform badges - تعرض كل المنصات المرتبطة بالوحدة المدموجة */}
+                    {platforms.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2 items-center">
+                        {platforms.map((platform) => (
+                          <span
+                            key={platform as string}
+                            className={`px-2 py-1 rounded text-xs font-medium border ${
+                              platform === "airbnb"
+                                ? "bg-red-100 text-red-700 border-red-300"
+                                : "bg-green-100 text-green-700 border-green-300"
+                            }`}
+                          >
+                            {platform === "airbnb" ? "🏠 Airbnb" : "💬 Gathern"}
+                          </span>
+                        ))}
+                        {platforms.length > 1 && (
+                          <span className="px-2 py-1 rounded text-[11px] font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                            وحدات مدموجة
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>

@@ -171,6 +171,11 @@ export default async function DashboardPage() {
     getDashboardStats()
   ]);
 
+  // رابط سريع لعرض حجوزات اليوم في صفحة الحجوزات (قائمة)
+  // نستخدم بارامتر today حتى نعرض الحجوزات التي يكون فيها اليوم ضمن فترة الحجز
+  const today = new Date().toISOString().split("T")[0];
+  const todayBookingsLink = `/dashboard/bookings?today=${today}`;
+
   return (
     <div className="space-y-6">
       <div>
@@ -196,6 +201,7 @@ export default async function DashboardPage() {
           value={stats.bookedToday}
           icon={Calendar}
           color="border-green-500"
+          link={todayBookingsLink}
         />
         <StatCard
           title="حجوزات قادمة (7 أيام)"

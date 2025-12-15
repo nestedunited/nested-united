@@ -14,7 +14,7 @@ async function getFilters() {
   return { accounts: accounts || [], units: units || [] };
 }
 
-async function getBookings(searchParams?: { from?: string; to?: string; platform_account_id?: string | string[]; unit_id?: string; platform?: string }) {
+async function getBookings(searchParams?: { from?: string; to?: string; platform_account_id?: string | string[]; unit_id?: string; platform?: string; today?: string }) {
   const filters = searchParams || {};
   const supabase = await createClient();
   
@@ -43,11 +43,19 @@ async function getBookings(searchParams?: { from?: string; to?: string; platform
   if (filters.platform && filters.platform !== "ical") {
     bookingsQuery = bookingsQuery.eq("platform", filters.platform);
   }
-  if (filters.from) {
-    bookingsQuery = bookingsQuery.gte("checkin_date", filters.from);
-  }
-  if (filters.to) {
-    bookingsQuery = bookingsQuery.lte("checkout_date", filters.to);
+
+  // فلترة حجوزات اليوم: اليوم يكون ضمن فترة الحجز
+  if (filters.today) {
+    bookingsQuery = bookingsQuery
+      .lte("checkin_date", filters.today)
+      .gte("checkout_date", filters.today);
+  } else {
+    if (filters.from) {
+      bookingsQuery = bookingsQuery.gte("checkin_date", filters.from);
+    }
+    if (filters.to) {
+      bookingsQuery = bookingsQuery.lte("checkout_date", filters.to);
+    }
   }
 
   const { data: bookingsData } = await bookingsQuery;
@@ -67,11 +75,18 @@ async function getBookings(searchParams?: { from?: string; to?: string; platform
   if (filters.platform && filters.platform !== "ical") {
     reservationsQuery = reservationsQuery.eq("platform", filters.platform);
   }
-  if (filters.from) {
-    reservationsQuery = reservationsQuery.gte("start_date", filters.from);
-  }
-  if (filters.to) {
-    reservationsQuery = reservationsQuery.lte("end_date", filters.to);
+
+  if (filters.today) {
+    reservationsQuery = reservationsQuery
+      .lte("start_date", filters.today)
+      .gte("end_date", filters.today);
+  } else {
+    if (filters.from) {
+      reservationsQuery = reservationsQuery.gte("start_date", filters.from);
+    }
+    if (filters.to) {
+      reservationsQuery = reservationsQuery.lte("end_date", filters.to);
+    }
   }
 
   const { data: reservationsData } = await reservationsQuery;
@@ -151,7 +166,7 @@ function formatQuery(params: Record<string, string | string[] | undefined>) {
 export default async function BookingsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ from?: string; to?: string; platform_account_id?: string | string[]; unit_id?: string; platform?: PlatformExtended }> | { from?: string; to?: string; platform_account_id?: string | string[]; unit_id?: string; platform?: PlatformExtended };
+  searchParams?: Promise<{ from?: string; to?: string; platform_account_id?: string | string[]; unit_id?: string; platform?: PlatformExtended; today?: string }> | { from?: string; to?: string; platform_account_id?: string | string[]; unit_id?: string; platform?: PlatformExtended; today?: string };
 }) {
   const resolvedParams = searchParams instanceof Promise ? await searchParams : (searchParams || {});
   
@@ -173,6 +188,7 @@ export default async function BookingsPage({
   const csvLink = `/api/bookings?${formatQuery({
     from: resolvedParams.from,
     to: resolvedParams.to,
+    today: resolvedParams.today,
     platform_account_id: platformAccountIds.length > 0 ? platformAccountIds : undefined,
     unit_id: resolvedParams.unit_id,
     platform: resolvedParams.platform,

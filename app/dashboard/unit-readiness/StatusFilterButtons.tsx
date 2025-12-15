@@ -9,7 +9,8 @@ const FILTER_OPTIONS = [
   { value: "awaiting_cleaning", label: "في انتظار التنظيف", icon: "⏳" },
   { value: "cleaning_in_progress", label: "قيد التنظيف", icon: "🧹" },
   { value: "ready", label: "جاهزة للتسكين", icon: "✅" },
-  { value: "occupied", label: "مشغولة", icon: "🏠" },
+  // توحيد التسمية مع باقي الواجهة: حالة \"تم التسكين\" بدلاً من \"مشغولة\"
+  { value: "occupied", label: "تم التسكين", icon: "🏠" },
   { value: "guest_not_checked_out", label: "الضيف لم يخرج", icon: "⚠️" },
   { value: "booked", label: "إشغال", icon: "📅" },
 ];

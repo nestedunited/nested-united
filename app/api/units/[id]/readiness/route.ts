@@ -57,7 +57,14 @@ export async function PUT(
     const supabase = createServiceClient();
     const currentUser = await getCurrentUser();
 
-    if (!currentUser || !isAdmin(currentUser)) {
+    // Admins + عمال الصيانة يمكنهم تعديل جاهزية الوحدات
+    if (
+      !currentUser ||
+      !(
+        isAdmin(currentUser) ||
+        currentUser.role === "maintenance_worker"
+      )
+    ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -83,10 +90,10 @@ export async function PUT(
       );
     }
 
-    // Check if unit exists
+    // Check if unit exists and get readiness_group_id if any
     const { data: unit, error: unitError } = await supabase
       .from("units")
-      .select("id")
+      .select("id, readiness_group_id")
       .eq("id", id)
       .single();
 
@@ -94,21 +101,49 @@ export async function PUT(
       return NextResponse.json({ error: "Unit not found" }, { status: 404 });
     }
 
-    // Upsert unit status
-    const { data, error } = await supabase
-      .from("units")
-      .update({
-        readiness_status: status,
-        readiness_checkout_date: checkout_date || null,
-        readiness_checkin_date: checkin_date || null,
-        readiness_guest_name: guest_name || null,
-        readiness_notes: notes || null,
-        readiness_updated_by: currentUser.id,
-        readiness_updated_at: new Date().toISOString(),
-      })
-      .eq("id", id)
-      .select()
-      .single();
+    // Prepare common payload
+    const payload = {
+      readiness_status: status,
+      readiness_checkout_date: checkout_date || null,
+      readiness_checkin_date: checkin_date || null,
+      readiness_guest_name: guest_name || null,
+      readiness_notes: notes || null,
+      readiness_updated_by: currentUser.id,
+      readiness_updated_at: new Date().toISOString(),
+    };
+
+    let data;
+    let error;
+
+    if (unit.readiness_group_id) {
+      // If unit is part of a readiness group, update all units in that group
+      const { data: groupUnits } = await supabase
+        .from("units")
+        .select("id")
+        .eq("readiness_group_id", unit.readiness_group_id);
+
+      const idsToUpdate = (groupUnits || []).map((u: any) => u.id);
+
+      const updateResult = await supabase
+        .from("units")
+        .update(payload)
+        .in("id", idsToUpdate)
+        .select();
+
+      data = updateResult.data?.[0] || null;
+      error = updateResult.error;
+    } else {
+      // Otherwise, update this unit only
+      const updateResult = await supabase
+        .from("units")
+        .update(payload)
+        .eq("id", id)
+        .select()
+        .single();
+
+      data = updateResult.data;
+      error = updateResult.error;
+    }
 
     if (error) {
       console.error("Error updating unit readiness:", error);

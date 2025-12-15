@@ -17,7 +17,8 @@ const STATUS_OPTIONS = [
 
 export function UpdateStatusButton({ unit, currentStatus }: { unit: any; currentStatus: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPrefilling, setIsPrefilling] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     status: currentStatus,
     checkout_date: unit.readiness_checkout_date || "",
@@ -27,9 +28,35 @@ export function UpdateStatusButton({ unit, currentStatus }: { unit: any; current
   });
   const router = useRouter();
 
+  const openWithDefaults = async () => {
+    setIsOpen(true);
+
+    // لو مفيش تواريخ محفوظة، نحاول نجيبها تلقائياً من الحجوزات (iCal + يدوي)
+    if (!unit.readiness_checkout_date && !unit.readiness_checkin_date) {
+      try {
+        setIsPrefilling(true);
+        const res = await fetch(`/api/units/${unit.id}/readiness-default`);
+        if (!res.ok) return;
+        const data = await res.json().catch(() => null);
+        if (!data) return;
+
+        setFormData((prev) => ({
+          ...prev,
+          checkout_date: data.checkout_date || prev.checkout_date,
+          checkin_date: data.checkin_date || prev.checkin_date,
+          guest_name: data.guest_name || prev.guest_name,
+        }));
+      } catch (err) {
+        console.error("Failed to prefill readiness from bookings:", err);
+      } finally {
+        setIsPrefilling(false);
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSubmitting(true);
 
     try {
       const response = await fetch(`/api/units/${unit.id}/readiness`, {
@@ -53,18 +80,18 @@ export function UpdateStatusButton({ unit, currentStatus }: { unit: any; current
           : "حدث خطأ أثناء تحديث الحالة"
       );
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
     <>
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={openWithDefaults}
         className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
       >
         <Edit className="w-4 h-4" />
-        تحديث الحالة
+        {isPrefilling ? "جاري تحميل الحجز..." : "تحديث الحالة"}
       </button>
 
       {/* Modal */}
@@ -154,15 +181,15 @@ export function UpdateStatusButton({ unit, currentStatus }: { unit: any; current
                 <div className="flex gap-3 mt-6">
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                     className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                   >
-                    {isLoading ? "جاري الحفظ..." : "حفظ"}
+                    {isSubmitting ? "جاري الحفظ..." : "حفظ"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                     className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                   >
                     إلغاء
