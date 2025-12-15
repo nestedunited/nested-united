@@ -63,7 +63,7 @@ export async function checkUserPermission(
 
   // For maintenance workers, check permissions table first
   // If a permission exists in the database, use it
-  // Otherwise, default to maintenance page only
+  // Otherwise, give them default access to maintenance + unit readiness pages
   if (user.role === "maintenance_worker") {
     if (permission) {
       // Permission exists in database, use it
@@ -76,8 +76,13 @@ export async function checkUserPermission(
       serverPermissionCache.set(cacheKey, { result, timestamp: now });
       return result;
     } else {
-      // No permission in database, use default: only maintenance page
-      const result = pagePath === "/dashboard/maintenance";
+      // No permission in database, use default:
+      // - /dashboard/maintenance
+      // - /dashboard/unit-readiness
+      const defaultPages = ["/dashboard/maintenance", "/dashboard/unit-readiness"];
+      const canView = defaultPages.includes(pagePath);
+      const canEdit = canView; // السماح بالتعديل في الصفحتين بشكل افتراضي
+      const result = action === "view" ? canView : canEdit;
       serverPermissionCache.set(cacheKey, { result, timestamp: now });
       return result;
     }
