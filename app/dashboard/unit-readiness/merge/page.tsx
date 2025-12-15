@@ -23,7 +23,14 @@ async function getUnitsForMerge() {
     return [];
   }
 
-  return data || [];
+  // Supabase قد يرجع platform_account كمصفوفة، لذلك نطبعها لكائن واحد ليتوافق مع نوع UnitOption
+  const rows = (data || []) as any[];
+  return rows.map((u) => ({
+    ...u,
+    platform_account: Array.isArray(u.platform_account)
+      ? u.platform_account[0] || null
+      : u.platform_account || null,
+  }));
 }
 
 export default async function MergeUnitsPage() {
