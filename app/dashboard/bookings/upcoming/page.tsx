@@ -135,24 +135,32 @@ export default async function UpcomingBookingsPage() {
                   <CalendarDays className="w-4 h-4 text-gray-400" />
                   <div>
                     <span className="font-medium">دخول:</span>{" "}
-                    {new Date(booking.checkin_date).toLocaleDateString("ar-EG", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    {(() => {
+                      const [y, m, d] = booking.checkin_date.split("-");
+                      const date = new Date(Number(y), Number(m) - 1, Number(d));
+                      return date.toLocaleDateString("ar-EG", {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      });
+                    })()}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-gray-600">
                   <CalendarDays className="w-4 h-4 text-gray-400" />
                   <div>
                     <span className="font-medium">خروج:</span>{" "}
-                    {new Date(booking.checkout_date).toLocaleDateString("ar-EG", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    {(() => {
+                      const [y, m, d] = booking.checkout_date.split("-");
+                      const date = new Date(Number(y), Number(m) - 1, Number(d));
+                      return date.toLocaleDateString("ar-EG", {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      });
+                    })()}
                   </div>
                 </div>
                 {booking.unit && (

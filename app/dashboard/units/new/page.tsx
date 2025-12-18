@@ -19,6 +19,7 @@ export default function NewUnitPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [accounts, setAccounts] = useState<any[]>([]);
+  const [calendars, setCalendars] = useState<Array<{ platform: string; ical_url: string; is_primary: boolean; platform_account_id: string | null }>>([]);
 
   useEffect(() => {
     fetch("/api/accounts")
@@ -34,13 +35,13 @@ export default function NewUnitPage() {
 
     const formData = new FormData(e.currentTarget);
     const data = {
-      platform_account_id: formData.get("platform_account_id"),
       unit_name: formData.get("unit_name"),
       unit_code: formData.get("unit_code") || null,
       city: formData.get("city") || null,
       address: formData.get("address") || null,
       capacity: formData.get("capacity") ? parseInt(formData.get("capacity") as string) : null,
       status: "active",
+      calendars: calendars.filter(cal => cal.platform && cal.ical_url), // Only include calendars with platform and URL
     };
 
     try {
@@ -81,20 +82,102 @@ export default function NewUnitPage() {
             </div>
           )}
 
+          {/* Calendars Section */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">الحساب *</label>
-            <select
-              name="platform_account_id"
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">اختر الحساب</option>
-              {accounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  {acc.account_name} ({acc.platform === "airbnb" ? "Airbnb" : "Gathern"})
-                </option>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              التقاويم (يمكن إضافة تقويم Airbnb و/أو Gathern)
+            </label>
+            <div className="space-y-3">
+              {calendars.map((cal, index) => (
+                <div key={index} className="flex gap-2 items-start p-3 border border-gray-200 rounded-lg">
+                  <div className="flex-1 grid grid-cols-1 gap-2">
+                    <select
+                      value={cal.platform}
+                      onChange={(e) => {
+                        const newCalendars = [...calendars];
+                        newCalendars[index].platform = e.target.value;
+                        newCalendars[index].platform_account_id = null; // Reset account when platform changes
+                        setCalendars(newCalendars);
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">اختر المنصة</option>
+                      <option value="airbnb">Airbnb</option>
+                      <option value="gathern">Gathern</option>
+                    </select>
+                    {cal.platform && (
+                      <select
+                        value={cal.platform_account_id || ""}
+                        onChange={(e) => {
+                          const newCalendars = [...calendars];
+                          newCalendars[index].platform_account_id = e.target.value || null;
+                          setCalendars(newCalendars);
+                        }}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">اختر الحساب</option>
+                        {accounts
+                          .filter((acc) => acc.platform === cal.platform)
+                          .map((acc) => (
+                            <option key={acc.id} value={acc.id}>
+                              {acc.account_name}
+                            </option>
+                          ))}
+                      </select>
+                    )}
+                    <input
+                      type="text"
+                      placeholder="رابط iCal"
+                      value={cal.ical_url}
+                      onChange={(e) => {
+                        const newCalendars = [...calendars];
+                        newCalendars[index].ical_url = e.target.value;
+                        setCalendars(newCalendars);
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-1 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={cal.is_primary}
+                        onChange={(e) => {
+                          const newCalendars = calendars.map((c, i) => ({
+                            ...c,
+                            is_primary: i === index ? e.target.checked : false, // Only one primary
+                          }));
+                          setCalendars(newCalendars);
+                        }}
+                        className="w-4 h-4"
+                      />
+                      رئيسي
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCalendars(calendars.filter((_, i) => i !== index));
+                      }}
+                      className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
+                    >
+                      حذف
+                    </button>
+                  </div>
+                </div>
               ))}
-            </select>
+              <button
+                type="button"
+                onClick={() => {
+                  setCalendars([...calendars, { platform: "", ical_url: "", is_primary: calendars.length === 0, platform_account_id: null }]);
+                }}
+                className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600"
+              >
+                + إضافة تقويم
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              يمكنك إضافة التقاويم لاحقاً من صفحة تفاصيل الوحدة
+            </p>
           </div>
 
           <div>

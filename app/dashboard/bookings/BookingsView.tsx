@@ -37,6 +37,26 @@ interface BookingsViewProps {
   bookings: Booking[];
 }
 
+// ----------------------------------------------------------------------
+// دالة المعالجة السحرية لتجاهل الوقت تماماً
+// ----------------------------------------------------------------------
+function formatArDate(dateStr: string) {
+  if (!dateStr) return "";
+  
+  // نفكك التاريخ القادم (2025-12-16) إلى أرقام
+  const [y, m, d] = dateStr.split("-");
+  
+  // ننشئ تاريخاً محلياً يبدأ من منتصف الليل بتوقيت جهاز المستخدم
+  // هذا يضمن أن اليوم يظل ثابتاً ولا يتأثر بـ UTC
+  const date = new Date(Number(y), Number(m) - 1, Number(d));
+  
+  return date.toLocaleDateString("ar-EG", {
+    day: "numeric",
+    month: "numeric", // أو "long" لو عايز اسم الشهر بالعربي
+    year: "numeric"
+  });
+}
+
 export function BookingsView({ bookings }: BookingsViewProps) {
   const [view, setView] = useState<ViewType>("list");
 
@@ -172,13 +192,13 @@ function ListView({ bookings }: BookingsViewProps) {
               <div className="flex items-center gap-2">
                 <CalendarDays className="w-4 h-4 text-gray-400" />
                 <span>
-                  <span className="font-medium">دخول:</span> {new Date(b.checkin_date).toLocaleDateString("ar-EG")}
+                  <span className="font-medium">دخول:</span> {formatArDate(b.checkin_date)}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <CalendarDays className="w-4 h-4 text-gray-400" />
                 <span>
-                  <span className="font-medium">خروج:</span> {new Date(b.checkout_date).toLocaleDateString("ar-EG")}
+                  <span className="font-medium">خروج:</span> {formatArDate(b.checkout_date)}
                 </span>
               </div>
               {b.unit && (
@@ -263,7 +283,7 @@ function GridView({ bookings }: BookingsViewProps) {
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <CalendarDays className="w-4 h-4 text-gray-400" />
               <span>
-                {new Date(b.checkin_date).toLocaleDateString("ar-EG")} → {new Date(b.checkout_date).toLocaleDateString("ar-EG")}
+                {formatArDate(b.checkin_date)} → {formatArDate(b.checkout_date)}
               </span>
             </div>
             {b.unit && (
@@ -340,12 +360,15 @@ function TableView({ bookings }: BookingsViewProps) {
                   </div>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">{b.phone || "-"}</td>
+                
+                {/* تم تعديل طريقة عرض التواريخ هنا لتستخدم الدالة الموحدة */}
                 <td className="px-4 py-3 text-sm text-gray-600">
-                  {new Date(b.checkin_date).toLocaleDateString("ar-EG")}
+                  {formatArDate(b.checkin_date)}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">
-                  {new Date(b.checkout_date).toLocaleDateString("ar-EG")}
+                  {formatArDate(b.checkout_date)}
                 </td>
+                
                 <td className="px-4 py-3 text-sm text-gray-600">
                   {b.unit ? (
                     <>
@@ -392,4 +415,3 @@ function TableView({ bookings }: BookingsViewProps) {
     </div>
   );
 }
-

@@ -14,8 +14,16 @@ export default function UnitCalendarsPage({
   const { id } = use(params);
   const router = useRouter();
   const [calendars, setCalendars] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/accounts")
+      .then((res) => res.json())
+      .then(setAccounts)
+      .catch(console.error);
+  }, []);
 
   const fetchCalendars = () => {
     fetch(`/api/units/${id}/calendars`)
@@ -37,6 +45,7 @@ export default function UnitCalendarsPage({
       platform: formData.get("platform"),
       ical_url: formData.get("ical_url"),
       is_primary: formData.get("is_primary") === "on",
+      platform_account_id: formData.get("platform_account_id") || null,
     };
 
     try {
@@ -121,6 +130,11 @@ export default function UnitCalendarsPage({
                       )}
                     </div>
                     <p className="text-gray-600 text-sm break-all">{cal.ical_url}</p>
+                    {cal.platform_account && (
+                      <p className="text-gray-500 text-xs mt-1">
+                        الحساب: {cal.platform_account.account_name}
+                      </p>
+                    )}
                   </div>
                   <button
                     onClick={() => handleDelete(cal.id)}
@@ -145,13 +159,43 @@ export default function UnitCalendarsPage({
               <label className="block text-sm font-medium text-gray-700 mb-2">المنصة *</label>
               <select
                 name="platform"
+                id="platform"
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => {
+                  // Reset account select when platform changes
+                  const accountSelect = document.getElementById("platform_account_id") as HTMLSelectElement;
+                  if (accountSelect) accountSelect.value = "";
+                }}
               >
                 <option value="">اختر المنصة</option>
                 <option value="airbnb">Airbnb</option>
                 <option value="gathern">Gathern</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">الحساب</label>
+              <select
+                name="platform_account_id"
+                id="platform_account_id"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">اختر الحساب (اختياري)</option>
+                {accounts
+                  .filter((acc) => {
+                    const platformSelect = document.getElementById("platform") as HTMLSelectElement;
+                    return !platformSelect || !platformSelect.value || acc.platform === platformSelect.value;
+                  })
+                  .map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.account_name} ({acc.platform === "airbnb" ? "Airbnb" : "Gathern"})
+                    </option>
+                  ))}
+              </select>
+              <p className="text-gray-500 text-xs mt-1">
+                اختر الحساب المرتبط بهذا التقويم (اختياري)
+              </p>
             </div>
 
             <div>

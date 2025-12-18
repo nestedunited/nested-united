@@ -219,8 +219,13 @@ export function CalendarView({ year: initialYear, month: initialMonth, initialBo
                   </div>
                   <div className="text-left">
                     <div className="text-sm text-gray-600">
-                      {new Date(booking.checkin_date).toLocaleDateString("ar-EG")} →{" "}
-                      {new Date(booking.checkout_date).toLocaleDateString("ar-EG")}
+                      {(() => {
+                        const [sy, sm, sd] = booking.checkin_date.split("-");
+                        const [ey, em, ed] = booking.checkout_date.split("-");
+                        const start = new Date(Number(sy), Number(sm) - 1, Number(sd));
+                        const end = new Date(Number(ey), Number(em) - 1, Number(ed));
+                        return `${start.toLocaleDateString("ar-EG")} → ${end.toLocaleDateString("ar-EG")}`;
+                      })()}
                     </div>
                     <span
                       className={`mt-2 inline-block px-2 py-1 text-xs rounded ${

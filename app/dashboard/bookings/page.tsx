@@ -50,10 +50,19 @@ async function getBookings(searchParams?: { from?: string; to?: string; platform
       .lte("checkin_date", filters.today)
       .gte("checkout_date", filters.today);
   } else {
-    if (filters.from) {
+    // فلترة بالتاريخ: أي حجز يتقاطع مع الفترة [from, to]
+    // الحجز يتقاطع مع الفترة إذا: checkin_date <= to AND checkout_date >= from
+    // لكن المستخدم يريد الحجوزات التي تبدأ وتنتهي داخل الفترة فقط
+    if (filters.from && filters.to) {
+      // الحجز يجب أن يبدأ بعد أو في بداية الفترة وينتهي قبل أو في نهاية الفترة
+      bookingsQuery = bookingsQuery
+        .gte("checkin_date", filters.from)  // الحجز يبدأ بعد أو في بداية الفترة
+        .lte("checkout_date", filters.to);  // الحجز ينتهي قبل أو في نهاية الفترة
+    } else if (filters.from) {
+      // لو محدد من تاريخ فقط → نحضر أي حجز يبدأ بعد أو في هذا التاريخ
       bookingsQuery = bookingsQuery.gte("checkin_date", filters.from);
-    }
-    if (filters.to) {
+    } else if (filters.to) {
+      // لو محدد إلى تاريخ فقط → نحضر أي حجز ينتهي قبل أو في هذا التاريخ
       bookingsQuery = bookingsQuery.lte("checkout_date", filters.to);
     }
   }
@@ -65,7 +74,17 @@ async function getBookings(searchParams?: { from?: string; to?: string; platform
     .from("reservations")
     .select(`
       *,
-      unit:units(id, unit_name, unit_code, platform_account_id, platform_account:platform_accounts(id, account_name, platform))
+      unit:units(
+        id,
+        unit_name,
+        unit_code,
+        unit_calendars:unit_calendars(
+          id,
+          platform,
+          is_primary,
+          platform_account:platform_accounts(id, account_name, platform)
+        )
+      )
     `)
     .order("start_date", { ascending: false });
 
@@ -81,10 +100,19 @@ async function getBookings(searchParams?: { from?: string; to?: string; platform
       .lte("start_date", filters.today)
       .gte("end_date", filters.today);
   } else {
-    if (filters.from) {
+    // فلترة بالتاريخ: أي حجز يتقاطع مع الفترة [from, to]
+    // الحجز يتقاطع مع الفترة إذا: start_date <= to AND end_date >= from
+    // لكن المستخدم يريد الحجوزات التي تبدأ وتنتهي داخل الفترة فقط
+    if (filters.from && filters.to) {
+      // الحجز يجب أن يبدأ بعد أو في بداية الفترة وينتهي قبل أو في نهاية الفترة
+      reservationsQuery = reservationsQuery
+        .gte("start_date", filters.from)  // الحجز يبدأ بعد أو في بداية الفترة
+        .lte("end_date", filters.to);     // الحجز ينتهي قبل أو في نهاية الفترة
+    } else if (filters.from) {
+      // لو محدد من تاريخ فقط → نحضر أي حجز يبدأ بعد أو في هذا التاريخ
       reservationsQuery = reservationsQuery.gte("start_date", filters.from);
-    }
-    if (filters.to) {
+    } else if (filters.to) {
+      // لو محدد إلى تاريخ فقط → نحضر أي حجز ينتهي قبل أو في هذا التاريخ
       reservationsQuery = reservationsQuery.lte("end_date", filters.to);
     }
   }
@@ -106,23 +134,29 @@ async function getBookings(searchParams?: { from?: string; to?: string; platform
     needs_update: false,
   }));
 
-  const reservations = (reservationsData || []).map((r: any) => ({
-    ...r,
-    type: "ical",
-    id: `reservation-${r.id}`,
-    checkin_date: r.start_date,
-    checkout_date: r.end_date,
-    guest_name: r.summary || "حجز من iCal",
-    phone: null,
-    amount: null,
-    currency: null,
-    notes: r.summary,
-    platform: r.platform,
-    platform_account: r.unit?.platform_account || null,
-    needs_update: !r.summary || r.summary === "حجز من iCal" || r.summary.length < 3, // Needs update if summary is missing or too short
-  }));
+  const reservations = (reservationsData || []).map((r: any) => {
+    // Find matching calendar for this reservation's platform
+    const matchingCalendar = (r.unit?.unit_calendars || []).find(
+      (cal: any) => cal.platform === r.platform
+    );
+    return {
+      ...r,
+      type: "ical",
+      id: `reservation-${r.id}`,
+      checkin_date: r.start_date,
+      checkout_date: r.end_date,
+      guest_name: r.summary || "حجز من iCal",
+      phone: null,
+      amount: null,
+      currency: null,
+      notes: r.summary,
+      platform: r.platform,
+      platform_account: matchingCalendar?.platform_account || null,
+      needs_update: !r.summary || r.summary === "حجز من iCal" || r.summary.length < 3, // Needs update if summary is missing or too short
+    };
+  });
 
-  // Filter by platform_account_id for reservations (through unit)
+  // Filter by platform_account_id for reservations (through unit calendars)
   let combined = [...bookings, ...reservations];
   if (filters.platform_account_id) {
     const accountIds = Array.isArray(filters.platform_account_id) 
@@ -133,7 +167,8 @@ async function getBookings(searchParams?: { from?: string; to?: string; platform
         if (item.type === "manual") {
           return accountIds.includes(item.platform_account_id);
         } else {
-          return accountIds.includes(item.unit?.platform_account_id);
+          // For iCal reservations, check platform_account from matching calendar
+          return item.platform_account && accountIds.includes(item.platform_account.id);
         }
       });
     }

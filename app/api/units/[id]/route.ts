@@ -14,8 +14,13 @@ export async function GET(
     .from("units")
     .select(`
       *,
-      platform_account:platform_accounts(*),
-      unit_calendars(*),
+      unit_calendars:unit_calendars(
+        id,
+        platform,
+        ical_url,
+        is_primary,
+        platform_account:platform_accounts(id, account_name, platform)
+      ),
       reservations(*),
       maintenance_tickets(*)
     `)

@@ -57,7 +57,12 @@ async function getUnitsWithReadiness(statusFilter?: string | null) {
       .from("units")
       .select(`
         *,
+      unit_calendars:unit_calendars(
+        id,
+        platform,
+        is_primary,
         platform_account:platform_accounts(id, platform, account_name)
+      )
       `)
       .eq("status", "active")
       .order("unit_name");
@@ -192,10 +197,11 @@ export default async function UnitReadinessPage({
             const status = unit.readiness_status || "ready";
             const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG];
             const mergedUnits: any[] = unit._merged_units || [unit];
+            // Extract platforms from unit_calendars (from all merged units)
             const platforms = Array.from(
               new Set(
                 mergedUnits
-                  .map((u) => u.platform_account?.platform)
+                  .flatMap((u) => (u.unit_calendars || []).map((cal: any) => cal.platform))
                   .filter(Boolean)
               )
             );
@@ -248,19 +254,19 @@ export default async function UnitReadinessPage({
                     )}
                   </div>
 
-                  {/* Dates */}
+                  {/* Dates - تاريخ الدخول أعلى من تاريخ الخروج */}
                   {(unit.readiness_checkout_date || unit.readiness_checkin_date) && (
                     <div className="space-y-2 text-sm">
-                      {unit.readiness_checkout_date && (
-                        <div className="flex items-center gap-2 text-gray-700">
-                          <Calendar className="w-4 h-4" />
-                          <span>خروج: {new Date(unit.readiness_checkout_date).toLocaleDateString("ar-EG")}</span>
-                        </div>
-                      )}
                       {unit.readiness_checkin_date && (
                         <div className="flex items-center gap-2 text-gray-700">
                           <Calendar className="w-4 h-4" />
                           <span>دخول: {new Date(unit.readiness_checkin_date).toLocaleDateString("ar-EG")}</span>
+                        </div>
+                      )}
+                      {unit.readiness_checkout_date && (
+                        <div className="flex items-center gap-2 text-gray-700">
+                          <Calendar className="w-4 h-4" />
+                          <span>خروج: {new Date(unit.readiness_checkout_date).toLocaleDateString("ar-EG")}</span>
                         </div>
                       )}
                     </div>

@@ -7,10 +7,25 @@ import { UnitsFilter } from "./UnitsFilter";
 
 async function getUnits() {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("units")
-    .select(`*, platform_account:platform_accounts(*)`)
+    .select(`
+      *,
+      unit_calendars:unit_calendars(
+        id,
+        platform,
+        ical_url,
+        is_primary,
+        platform_account:platform_accounts(id, account_name, platform)
+      )
+    `)
     .order("created_at", { ascending: false });
+  
+  if (error) {
+    console.error("[UnitsPage] Error fetching units:", error);
+    return [];
+  }
+  
   return data || [];
 }
 
@@ -31,8 +46,8 @@ export default async function UnitsPage({
   
   if (resolvedParams.platform && resolvedParams.platform !== "all") {
     units = units.filter((u) => {
-      const platform = u.platform_account?.platform?.toLowerCase();
-      return platform === resolvedParams.platform?.toLowerCase();
+      const platforms = (u.unit_calendars || []).map((cal: any) => cal.platform?.toLowerCase());
+      return platforms.includes(resolvedParams.platform?.toLowerCase());
     });
   }
   
@@ -108,16 +123,26 @@ export default async function UnitsPage({
                     )}
                   </div>
                 </Link>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`px-2 py-1 rounded text-xs ${
-                      unit.platform_account?.platform === "airbnb"
-                        ? "bg-red-100 text-red-600"
-                        : "bg-green-100 text-green-600"
-                    }`}
-                  >
-                    {unit.platform_account?.platform === "airbnb" ? "Airbnb" : "Gathern"}
-                  </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {(unit.unit_calendars || []).map((cal: any) => (
+                    <span
+                      key={cal.id}
+                      className={`px-2 py-1 rounded text-xs ${
+                        cal.platform === "airbnb"
+                          ? "bg-red-100 text-red-600"
+                          : "bg-green-100 text-green-600"
+                      }`}
+                      title={cal.is_primary ? "تقويم رئيسي" : ""}
+                    >
+                      {cal.platform === "airbnb" ? "🏠 Airbnb" : "💬 Gathern"}
+                      {cal.is_primary && " ⭐"}
+                    </span>
+                  ))}
+                  {(!unit.unit_calendars || unit.unit_calendars.length === 0) && (
+                    <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
+                      بدون منصات
+                    </span>
+                  )}
                   <UnitsDeleteButton unitId={unit.id} unitName={unit.unit_name} />
                 </div>
               </div>

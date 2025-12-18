@@ -18,6 +18,8 @@ export default function EditUnitPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [unit, setUnit] = useState<any>(null);
+  const [calendars, setCalendars] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
 
   useEffect(() => {
     if (canEdit === false) {
@@ -26,9 +28,16 @@ export default function EditUnitPage({
   }, [canEdit, router, id]);
 
   useEffect(() => {
-    fetch(`/api/units/${id}`)
-      .then((res) => res.json())
-      .then(setUnit)
+    Promise.all([
+      fetch(`/api/units/${id}`).then((res) => res.json()),
+      fetch(`/api/units/${id}/calendars`).then((res) => res.json()),
+      fetch(`/api/accounts`).then((res) => res.json()),
+    ])
+      .then(([unitData, calendarsData, accountsData]) => {
+        setUnit(unitData);
+        setCalendars(calendarsData || []);
+        setAccounts(accountsData || []);
+      })
       .catch(console.error);
   }, [id]);
 
@@ -169,6 +178,64 @@ export default function EditUnitPage({
               <option value="active">نشطة</option>
               <option value="inactive">غير نشطة</option>
             </select>
+          </div>
+
+          {/* Calendars Section */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">التقاويم والحسابات</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              كل تقويم مربوط بحساب مستثمر ومنصة (Airbnb أو Gathern)
+            </p>
+            
+            {calendars.length > 0 ? (
+              <div className="space-y-3 mb-4">
+                {calendars.map((cal) => (
+                  <div key={cal.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span
+                            className={`px-2 py-1 rounded text-xs ${
+                              cal.platform === "airbnb"
+                                ? "bg-red-100 text-red-600"
+                                : "bg-green-100 text-green-600"
+                            }`}
+                          >
+                            {cal.platform === "airbnb" ? "🏠 Airbnb" : "💬 Gathern"}
+                          </span>
+                          {cal.is_primary && (
+                            <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-600">
+                              ⭐ رئيسي
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 break-all mb-1">{cal.ical_url}</p>
+                        {cal.platform_account ? (
+                          <p className="text-xs text-gray-500">
+                            الحساب: {cal.platform_account.account_name}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-yellow-600">⚠️ غير مربوط بحساب</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-sm mb-4">لا توجد تقاويم مرتبطة بهذه الوحدة</p>
+            )}
+
+            <Link
+              href={`/dashboard/units/${id}/calendars`}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+            >
+              <span>إدارة التقاويم</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <p className="text-xs text-gray-500 mt-2">
+              يمكنك إضافة أو تعديل التقاويم وربطها بحسابات المستثمرين من صفحة إدارة التقاويم
+            </p>
           </div>
 
           <div className="flex gap-4">

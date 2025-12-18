@@ -11,7 +11,10 @@ export async function GET(
 
   const { data, error } = await supabase
     .from("unit_calendars")
-    .select("*")
+    .select(`
+      *,
+      platform_account:platform_accounts(id, account_name, platform)
+    `)
     .eq("unit_id", id)
     .order("created_at");
 
@@ -31,10 +34,18 @@ export async function POST(
   const supabase = await createClient();
 
   const body = await request.json();
-  const { platform, ical_url, is_primary } = body;
+  const { platform, ical_url, is_primary, platform_account_id } = body;
 
   if (!platform || !ical_url) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+
+  // If this calendar is marked as primary, unset other primary calendars for this unit
+  if (is_primary) {
+    await supabase
+      .from("unit_calendars")
+      .update({ is_primary: false })
+      .eq("unit_id", id);
   }
 
   const { data, error } = await supabase
@@ -44,12 +55,30 @@ export async function POST(
       platform,
       ical_url,
       is_primary: is_primary || false,
+      platform_account_id: platform_account_id || null,
     })
     .select()
     .single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // If no primary calendar exists, make this one primary
+  if (!is_primary) {
+    const { count } = await supabase
+      .from("unit_calendars")
+      .select("*", { count: "exact", head: true })
+      .eq("unit_id", id)
+      .eq("is_primary", true);
+    
+    if (count === 0) {
+      await supabase
+        .from("unit_calendars")
+        .update({ is_primary: true })
+        .eq("id", data.id);
+      data.is_primary = true;
+    }
   }
 
   return NextResponse.json(data, { status: 201 });

@@ -23,7 +23,13 @@ async function getUnit(id: string) {
     .from("units")
     .select(`
       *,
-      platform_account:platform_accounts(*),
+      unit_calendars:unit_calendars(
+        id,
+        platform,
+        ical_url,
+        is_primary,
+        platform_account:platform_accounts(id, account_name, platform)
+      ),
       reservations(*),
       maintenance_tickets(*)
     `)
@@ -157,21 +163,25 @@ export default async function UnitDetailsPage({
             {unit.unit_code && (
               <span className="text-gray-500">كود: {unit.unit_code}</span>
             )}
-            <span
-              className={`px-2 py-1 rounded text-xs ${
-                unit.platform_account?.platform === "airbnb"
-                  ? "bg-red-100 text-red-600"
-                  : unit.platform_account?.platform === "gathern"
-                  ? "bg-green-100 text-green-600"
-                  : "bg-emerald-100 text-emerald-700"
-              }`}
-            >
-              {unit.platform_account?.platform === "airbnb"
-                ? "Airbnb"
-                : unit.platform_account?.platform === "gathern"
-                ? "Gathern"
-                : "WhatsApp"}
-            </span>
+            {(unit.unit_calendars || []).map((cal: any) => (
+              <span
+                key={cal.id}
+                className={`px-2 py-1 rounded text-xs ${
+                  cal.platform === "airbnb"
+                    ? "bg-red-100 text-red-600"
+                    : "bg-green-100 text-green-600"
+                }`}
+                title={cal.is_primary ? "تقويم رئيسي" : cal.platform_account?.account_name || ""}
+              >
+                {cal.platform === "airbnb" ? "🏠 Airbnb" : "💬 Gathern"}
+                {cal.is_primary && " ⭐"}
+              </span>
+            ))}
+            {(!unit.unit_calendars || unit.unit_calendars.length === 0) && (
+              <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
+                بدون منصات
+              </span>
+            )}
             <span
               className={`px-2 py-1 rounded text-xs ${
                 unit.status === "active"
@@ -226,7 +236,7 @@ export default async function UnitDetailsPage({
               </div>
             )}
             <p className="text-gray-500 text-sm">
-              الحساب: {unit.platform_account?.account_name}
+              المنصات: {(unit.unit_calendars || []).map((cal: any) => cal.platform_account?.account_name || cal.platform).join(", ") || "لا توجد منصات"}
             </p>
           </div>
         </div>

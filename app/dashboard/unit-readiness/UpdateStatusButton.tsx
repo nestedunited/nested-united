@@ -123,20 +123,7 @@ export function UpdateStatusButton({ unit, currentStatus }: { unit: any; current
                   </select>
                 </div>
 
-                {/* Checkout Date */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    تاريخ الخروج (اختياري)
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.checkout_date}
-                    onChange={(e) => setFormData({ ...formData, checkout_date: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Checkin Date */}
+                {/* Checkin Date (أولاً) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     تاريخ الدخول (اختياري)
@@ -145,6 +132,19 @@ export function UpdateStatusButton({ unit, currentStatus }: { unit: any; current
                     type="date"
                     value={formData.checkin_date}
                     onChange={(e) => setFormData({ ...formData, checkin_date: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Checkout Date (ثانياً) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    تاريخ الخروج (اختياري)
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.checkout_date}
+                    onChange={(e) => setFormData({ ...formData, checkout_date: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
