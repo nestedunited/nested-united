@@ -13,7 +13,7 @@ interface ParsedEvent {
 }
 
 // ---------------------------------------------------------------------------
-// 1. دالة قراءة الـ iCal (ثابتة وممتازة لقراءة التواريخ بدقة)
+// 1. دالة قراءة الـ iCal (تم تصحيح خطأ TypeScript هنا)
 // ---------------------------------------------------------------------------
 async function parseICalUrl(url: string): Promise<ParsedEvent[]> {
   try {
@@ -47,14 +47,20 @@ async function parseICalUrl(url: string): Promise<ParsedEvent[]> {
         const startStr = `${startInfo.year}-${pad(startInfo.month)}-${pad(startInfo.day)}`;
         const endStr = `${endInfo.year}-${pad(endInfo.month)}-${pad(endInfo.day)}`;
 
+        // FIX: تم إضافة (as string) لحل مشكلة الـ Build
+        const statusVal = vevent.getFirstPropertyValue("status");
+        const transpVal = vevent.getFirstPropertyValue("transp");
+        const descVal = vevent.getFirstPropertyValue("description");
+
         events.push({
           start: startStr,
           end: endStr,
           summary: event.summary || null,
           uid: event.uid || null,
-          status: vevent.getFirstPropertyValue("status") || null,
-          transparency: vevent.getFirstPropertyValue("transp") || null,
-          description: vevent.getFirstPropertyValue("description") || null,
+          // هنا نتحقق من النوع قبل الإرسال لإرضاء TypeScript
+          status: typeof statusVal === "string" ? statusVal : null,
+          transparency: typeof transpVal === "string" ? transpVal : null,
+          description: typeof descVal === "string" ? descVal : null,
         });
       }
     }
@@ -96,7 +102,6 @@ export async function POST() {
       });
     }
 
-    // تجهيز ماب للحجوزات الرئيسية (للمقارنة لاحقاً)
     const primaryReservations = new Map<string, Set<string>>();
 
     // =========================================================================
@@ -121,34 +126,28 @@ export async function POST() {
           if (event.start > event.end) continue;
           if (event.status && event.status.toUpperCase() === "CANCELLED") continue;
 
-          // إضافة للمجموعة المرجعية
           const rangeKey = `${event.start}-${event.end}`;
           primarySet.add(rangeKey);
           validEventRangesForPrimary.add(rangeKey);
 
-          // فلترة Airbnb و Gathern في التقويم الأساسي أيضاً
           if (calendar.platform === "airbnb" || calendar.platform === "gathern") {
              const summaryLower = (event.summary || "").toLowerCase();
-             
-             // قائمة الكلمات المحظورة (عربي وإنجليزي)
              if (
                 summaryLower.includes("not available") || 
                 summaryLower.includes("unavailable") ||
                 summaryLower.includes("blocked") ||
                 summaryLower.includes("closed") ||
-                summaryLower.includes("غير متاح") || // Gathern Arabic
-                summaryLower.includes("مغلق") ||     // Gathern Arabic
-                summaryLower.includes("محجوب")       // Gathern Arabic
+                summaryLower.includes("غير متاح") || 
+                summaryLower.includes("مغلق") ||     
+                summaryLower.includes("محجوب")       
              ) continue;
 
-             // تحقق إضافي لـ Airbnb
              if (calendar.platform === "airbnb") {
                  const descLower = (event.description || "").toLowerCase();
                  if (summaryLower !== "reserved" && !descLower.includes("http")) continue;
              }
           }
 
-          // التحقق من التعديل اليدوي
           const { data: existingReservation } = await supabase
             .from("reservations")
             .select("id, is_manually_edited")
@@ -160,7 +159,6 @@ export async function POST() {
 
           if (existingReservation?.is_manually_edited) continue;
 
-          // حفظ الحجز
           const { error: upsertError } = await supabase.from("reservations").upsert(
             {
               unit_id: calendar.unit_id,
@@ -178,7 +176,6 @@ export async function POST() {
           if (!upsertError) newBookings++;
         }
 
-        // تنظيف الحجوزات القديمة
         const { data: existingPrimaryReservations } = await supabase
           .from("reservations")
           .select("id, start_date, end_date, is_manually_edited")
@@ -225,22 +222,18 @@ export async function POST() {
           if (event.start > event.end) continue;
           if (event.status?.toUpperCase() === "CANCELLED") continue;
 
-          // -------------------------------------------------------------------
-          // FIX: فلترة موحدة لـ Airbnb و Gathern
-          // -------------------------------------------------------------------
           if (calendar.platform === "airbnb" || calendar.platform === "gathern") {
             const summaryLower = (event.summary || "").toLowerCase();
             const descLower = (event.description || "").toLowerCase();
 
-            // 1. فلترة الكلمات المحظورة (Blocks)
             const isBlocked = 
                 summaryLower.includes("not available") ||
                 summaryLower.includes("unavailable") ||
                 summaryLower.includes("blocked") ||
                 summaryLower.includes("closed") ||
-                summaryLower.includes("غير متاح") || // عربي
-                summaryLower.includes("مغلق") ||     // عربي
-                summaryLower.includes("محجوب") ||    // عربي
+                summaryLower.includes("غير متاح") || 
+                summaryLower.includes("مغلق") ||     
+                summaryLower.includes("محجوب") ||    
                 summaryLower === "airbnb (not available)";
 
             if (isBlocked) {
@@ -248,7 +241,6 @@ export async function POST() {
               continue;
             }
 
-            // 2. فلترة خاصة بـ Airbnb (لزيادة الدقة)
             if (calendar.platform === "airbnb") {
                const isReserved = summaryLower === "reserved";
                const hasUrl = descLower.includes("http") || descLower.includes("reservation");
@@ -260,9 +252,7 @@ export async function POST() {
                }
             }
           }
-          // -------------------------------------------------------------------
 
-          // لو الحجز موجود في الـ Primary، نتجاهله
           const eventRange = `${event.start}-${event.end}`;
           if (
               (calendar.platform === "airbnb" || calendar.platform === "gathern") && 
@@ -271,7 +261,6 @@ export async function POST() {
             continue;
           }
 
-          // التحقق من التعديل اليدوي
           const { data: existingReservation } = await supabase
             .from("reservations")
             .select("id, is_manually_edited")
@@ -306,7 +295,6 @@ export async function POST() {
           }
         }
 
-        // تنظيف الحجوزات القديمة (Airbnb & Gathern)
         if (calendar.platform === "airbnb" || calendar.platform === "gathern") {
            const { data: oldReservations } = await supabase
              .from("reservations")
