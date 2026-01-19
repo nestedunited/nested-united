@@ -101,7 +101,11 @@ let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 const browserSessions: Map<string, BrowserAccountSession> = new Map();
 const isDev = !app.isPackaged;
+const PROD_APP_URL = process.env.APP_URL || "https://nestedunited.netlify.app/";
 let isAppQuitting = false;
+const APP_USER_MODEL_ID = "com.rentals.dashboard";
+
+app.setAppUserModelId(APP_USER_MODEL_ID);
 
 // Data directory for persistent storage
 const userDataPath = app.getPath("userData");
@@ -137,21 +141,39 @@ function saveSessions() {
 function createMainWindow() {
   // إنشاء session منفصل للداشبورد الرئيسي
   // هذا يمنع مشاركة cookies مع المتصفح العادي
+  // استخدام "persist:" يضمن حفظ الـ cookies بشكل دائم
   const dashboardSession = session.fromPartition("persist:dashboard-main", {
     cache: true,
   });
+
+  // Configure session to persist cookies forever
+  // Auto-flush cookies to disk whenever they change
+  dashboardSession.cookies.on('changed', () => {
+    // Ensure cookies are saved immediately to disk
+    dashboardSession.cookies.flushStore().catch(err => {
+      console.error('Error flushing cookies:', err);
+    });
+  });
+
+  // Configure session to persist cookies forever
+  dashboardSession.cookies.on('changed', () => {
+    // Force save cookies immediately
+    dashboardSession.cookies.flushStore().catch(err => {
+      console.error('Error flushing cookies:', err);
+    });
+  });
+
+  const iconPath = isDev
+    ? path.join(__dirname, "../build/icon.ico")
+    : path.join(process.resourcesPath, "build", "icon.ico");
 
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 1024,
     minHeight: 768,
-    title: "لوحة التحكم - إدارة الوحدات",
-    icon: fs.existsSync(path.join(__dirname, "../build/icon.ico"))
-      ? path.join(__dirname, "../build/icon.ico")
-      : fs.existsSync(path.join(__dirname, "../public/logo.ico"))
-      ? path.join(__dirname, "../public/logo.ico")
-      : path.join(__dirname, "../public/logo.png"),
+    title: "NestedUnited",
+    icon: iconPath,
     webPreferences: {
       session: dashboardSession, // استخدام session منفصل
       preload: path.join(__dirname, "preload.js"),
@@ -165,9 +187,12 @@ function createMainWindow() {
     mainWindow.loadURL("http://localhost:3000");
     // DevTools will open manually with F12 if needed
   } else {
-    startNextServer().then((port) => {
-      mainWindow?.loadURL(`http://localhost:${port}`);
-    });
+    // في الإنتاج: استخدم الموقع المنشور على Netlify كأولوية
+    // لو حابب تستخدم الـ bundle المحلي، أزل السطر التالي وأرجع لاستدعاء startNextServer
+    mainWindow.loadURL(PROD_APP_URL);
+
+    // ملاحظة: إذا احتجت الاعتماد على الخادم المحلي بدلاً من Netlify، استبدل السابق بـ:
+    // startNextServer().then((port) => mainWindow?.loadURL(`http://localhost:${port}`));
   }
 
   mainWindow.on("closed", () => {
@@ -175,9 +200,17 @@ function createMainWindow() {
   });
 
   mainWindow.on("close", (event) => {
-    if (!isAppQuitting) {
-      event.preventDefault();
-      mainWindow?.hide();
+    // On Windows/Linux, close the app when clicking X
+    // On macOS, hide to tray (macOS behavior)
+    if (process.platform === "darwin") {
+      if (!isAppQuitting) {
+        event.preventDefault();
+        mainWindow?.hide();
+      }
+    } else {
+      // Windows/Linux: Close the app
+      isAppQuitting = true;
+      app.quit();
     }
   });
 
@@ -205,11 +238,9 @@ function createMainWindow() {
 }
 
 function createTray() {
-  const iconPath = fs.existsSync(path.join(__dirname, "../build/icon.ico"))
+  const iconPath = isDev
     ? path.join(__dirname, "../build/icon.ico")
-    : fs.existsSync(path.join(__dirname, "../public/logo.ico"))
-    ? path.join(__dirname, "../public/logo.ico")
-    : path.join(__dirname, "../public/logo.png");
+    : path.join(process.resourcesPath, "build", "icon.ico");
   const icon = nativeImage.createFromPath(iconPath);
   tray = new Tray(icon.resize({ width: 16, height: 16 }));
 
@@ -219,15 +250,27 @@ function createTray() {
     { label: "خروج", click: () => { isAppQuitting = true; app.quit(); } },
   ]);
 
-  tray.setToolTip("لوحة التحكم - إدارة الوحدات");
+  tray.setToolTip("NestedUnited");
   tray.setContextMenu(contextMenu);
   tray.on("double-click", () => mainWindow?.show());
 }
 
 // Create a separate browser window for platform account
 function createBrowserWindow(accountSession: BrowserAccountSession): BrowserWindow {
+  // استخدام "persist:" يضمن حفظ الـ cookies بشكل دائم حتى بعد إغلاق البرنامج
   const partition = `persist:${accountSession.partition}`;
-  const ses = session.fromPartition(partition);
+  const ses = session.fromPartition(partition, {
+    cache: true,
+  });
+
+  // Configure session to persist cookies forever
+  // Auto-flush cookies to disk whenever they change
+  ses.cookies.on('changed', () => {
+    // Ensure cookies are saved immediately to disk
+    ses.cookies.flushStore().catch(err => {
+      console.error('Error flushing cookies:', err);
+    });
+  });
 
   // Set a real Chrome User-Agent to avoid detection
   const chromeUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -250,17 +293,17 @@ function createBrowserWindow(accountSession: BrowserAccountSession): BrowserWind
     whatsapp: "#25D366",
   };
 
+  const iconPath = isDev
+    ? path.join(__dirname, "../build/icon.ico")
+    : path.join(process.resourcesPath, "build", "icon.ico");
+
   const browserWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 800,
     minHeight: 600,
     title: `${accountSession.accountName} - ${accountSession.platform === "airbnb" ? "Airbnb" : "Gathern"}`,
-    icon: fs.existsSync(path.join(__dirname, "../build/icon.ico"))
-      ? path.join(__dirname, "../build/icon.ico")
-      : fs.existsSync(path.join(__dirname, "../public/logo.ico"))
-      ? path.join(__dirname, "../public/logo.ico")
-      : path.join(__dirname, "../public/logo.png"),
+    icon: iconPath,
     webPreferences: {
       session: ses,
       preload: path.join(__dirname, "webview-preload.js"),
@@ -1077,11 +1120,9 @@ function showSystemNotification(title: string, body: string) {
     const notification = new Notification({
       title,
       body,
-      icon: fs.existsSync(path.join(__dirname, "../build/icon.ico"))
+      icon: isDev
         ? path.join(__dirname, "../build/icon.ico")
-        : fs.existsSync(path.join(__dirname, "../public/logo.ico"))
-        ? path.join(__dirname, "../public/logo.ico")
-        : path.join(__dirname, "../public/logo.png"),
+        : path.join(process.resourcesPath, "build", "icon.ico"),
       silent: false,
     });
 
@@ -1275,17 +1316,44 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-  // Don't quit on macOS
+  // On macOS, keep the app running even when all windows are closed
+  // On Windows/Linux, quit the app when all windows are closed
+  if (process.platform !== "darwin") {
+    isAppQuitting = true;
+    stopNextServer();
+    app.quit();
+  }
 });
 
-app.on("before-quit", () => {
+app.on("before-quit", async (event) => {
   isAppQuitting = true;
   stopNextServer();
+  
+  // Flush all cookies to disk before quitting
+  try {
+    // Flush dashboard session cookies
+    const dashboardSession = session.fromPartition("persist:dashboard-main");
+    await dashboardSession.cookies.flushStore();
+    
+    // Flush all browser account session cookies
+    browserSessions.forEach((account) => {
+      const partition = `persist:${account.partition}`;
+      const ses = session.fromPartition(partition);
+      ses.cookies.flushStore().catch(err => {
+        console.error(`Error flushing cookies for ${account.accountName}:`, err);
+      });
+    });
+  } catch (err) {
+    console.error('Error flushing cookies before quit:', err);
+  }
   
   // Close all browser windows
   browserSessions.forEach((account) => {
     if (account.window && !account.window.isDestroyed()) {
-      account.window.close();
+      account.window.destroy();
     }
   });
+  
+  // Clear browser sessions
+  browserSessions.clear();
 });

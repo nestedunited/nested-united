@@ -101,7 +101,10 @@ let mainWindow = null;
 let tray = null;
 const browserSessions = new Map();
 const isDev = !electron_1.app.isPackaged;
+const PROD_APP_URL = process.env.APP_URL || "https://nestedunited.netlify.app/";
 let isAppQuitting = false;
+const APP_USER_MODEL_ID = "com.rentals.dashboard";
+electron_1.app.setAppUserModelId(APP_USER_MODEL_ID);
 // Data directory for persistent storage
 const userDataPath = electron_1.app.getPath("userData");
 const sessionsPath = path.join(userDataPath, "sessions.json");
@@ -138,17 +141,16 @@ function createMainWindow() {
     const dashboardSession = electron_1.session.fromPartition("persist:dashboard-main", {
         cache: true,
     });
+    const iconPath = isDev
+        ? path.join(__dirname, "../build/icon.ico")
+        : path.join(process.resourcesPath, "build", "icon.ico");
     mainWindow = new electron_1.BrowserWindow({
         width: 1400,
         height: 900,
         minWidth: 1024,
         minHeight: 768,
-        title: "لوحة التحكم - إدارة الوحدات",
-        icon: fs.existsSync(path.join(__dirname, "../build/icon.ico"))
-            ? path.join(__dirname, "../build/icon.ico")
-            : fs.existsSync(path.join(__dirname, "../public/logo.ico"))
-                ? path.join(__dirname, "../public/logo.ico")
-                : path.join(__dirname, "../public/logo.png"),
+        title: "NestedUnited",
+        icon: iconPath,
         webPreferences: {
             session: dashboardSession, // استخدام session منفصل
             preload: path.join(__dirname, "preload.js"),
@@ -162,17 +164,28 @@ function createMainWindow() {
         // DevTools will open manually with F12 if needed
     }
     else {
-        startNextServer().then((port) => {
-            mainWindow?.loadURL(`http://localhost:${port}`);
-        });
+        // في الإنتاج: استخدم الموقع المنشور على Netlify كأولوية
+        // لو حابب تستخدم الـ bundle المحلي، أزل السطر التالي وأرجع لاستدعاء startNextServer
+        mainWindow.loadURL(PROD_APP_URL);
+        // ملاحظة: إذا احتجت الاعتماد على الخادم المحلي بدلاً من Netlify، استبدل السابق بـ:
+        // startNextServer().then((port) => mainWindow?.loadURL(`http://localhost:${port}`));
     }
     mainWindow.on("closed", () => {
         mainWindow = null;
     });
     mainWindow.on("close", (event) => {
-        if (!isAppQuitting) {
-            event.preventDefault();
-            mainWindow?.hide();
+        // On Windows/Linux, close the app when clicking X
+        // On macOS, hide to tray (macOS behavior)
+        if (process.platform === "darwin") {
+            if (!isAppQuitting) {
+                event.preventDefault();
+                mainWindow?.hide();
+            }
+        }
+        else {
+            // Windows/Linux: Close the app
+            isAppQuitting = true;
+            electron_1.app.quit();
         }
     });
     const menu = electron_1.Menu.buildFromTemplate([
@@ -198,11 +211,9 @@ function createMainWindow() {
     electron_1.Menu.setApplicationMenu(menu);
 }
 function createTray() {
-    const iconPath = fs.existsSync(path.join(__dirname, "../build/icon.ico"))
+    const iconPath = isDev
         ? path.join(__dirname, "../build/icon.ico")
-        : fs.existsSync(path.join(__dirname, "../public/logo.ico"))
-            ? path.join(__dirname, "../public/logo.ico")
-            : path.join(__dirname, "../public/logo.png");
+        : path.join(process.resourcesPath, "build", "icon.ico");
     const icon = electron_1.nativeImage.createFromPath(iconPath);
     tray = new electron_1.Tray(icon.resize({ width: 16, height: 16 }));
     const contextMenu = electron_1.Menu.buildFromTemplate([
@@ -210,7 +221,7 @@ function createTray() {
         { type: "separator" },
         { label: "خروج", click: () => { isAppQuitting = true; electron_1.app.quit(); } },
     ]);
-    tray.setToolTip("لوحة التحكم - إدارة الوحدات");
+    tray.setToolTip("NestedUnited");
     tray.setContextMenu(contextMenu);
     tray.on("double-click", () => mainWindow?.show());
 }
@@ -236,17 +247,16 @@ function createBrowserWindow(accountSession) {
         gathern: "#10B981",
         whatsapp: "#25D366",
     };
+    const iconPath = isDev
+        ? path.join(__dirname, "../build/icon.ico")
+        : path.join(process.resourcesPath, "build", "icon.ico");
     const browserWindow = new electron_1.BrowserWindow({
         width: 1200,
         height: 800,
         minWidth: 800,
         minHeight: 600,
         title: `${accountSession.accountName} - ${accountSession.platform === "airbnb" ? "Airbnb" : "Gathern"}`,
-        icon: fs.existsSync(path.join(__dirname, "../build/icon.ico"))
-            ? path.join(__dirname, "../build/icon.ico")
-            : fs.existsSync(path.join(__dirname, "../public/logo.ico"))
-                ? path.join(__dirname, "../public/logo.ico")
-                : path.join(__dirname, "../public/logo.png"),
+        icon: iconPath,
         webPreferences: {
             session: ses,
             preload: path.join(__dirname, "webview-preload.js"),
@@ -1031,11 +1041,9 @@ function showSystemNotification(title, body) {
         const notification = new electron_1.Notification({
             title,
             body,
-            icon: fs.existsSync(path.join(__dirname, "../build/icon.ico"))
+            icon: isDev
                 ? path.join(__dirname, "../build/icon.ico")
-                : fs.existsSync(path.join(__dirname, "../public/logo.ico"))
-                    ? path.join(__dirname, "../public/logo.ico")
-                    : path.join(__dirname, "../public/logo.png"),
+                : path.join(process.resourcesPath, "build", "icon.ico"),
             silent: false,
         });
         notification.on("click", () => {
@@ -1197,16 +1205,24 @@ electron_1.app.whenReady().then(() => {
     });
 });
 electron_1.app.on("window-all-closed", () => {
-    // Don't quit on macOS
+    // On macOS, keep the app running even when all windows are closed
+    // On Windows/Linux, quit the app when all windows are closed
+    if (process.platform !== "darwin") {
+        isAppQuitting = true;
+        stopNextServer();
+        electron_1.app.quit();
+    }
 });
-electron_1.app.on("before-quit", () => {
+electron_1.app.on("before-quit", (event) => {
     isAppQuitting = true;
     stopNextServer();
     // Close all browser windows
     browserSessions.forEach((account) => {
         if (account.window && !account.window.isDestroyed()) {
-            account.window.close();
+            account.window.destroy();
         }
     });
+    // Clear browser sessions
+    browserSessions.clear();
 });
 //# sourceMappingURL=main.js.map
