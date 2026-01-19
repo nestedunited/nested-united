@@ -119,7 +119,6 @@ export async function POST() {
           primaryReservations.set(unitId, new Set());
         }
         const primarySet = primaryReservations.get(unitId)!;
-        const validEventRangesForPrimary = new Set<string>();
 
         for (const event of events) {
           if (!event.start || !event.end) continue;
@@ -128,7 +127,6 @@ export async function POST() {
 
           const rangeKey = `${event.start}-${event.end}`;
           primarySet.add(rangeKey);
-          validEventRangesForPrimary.add(rangeKey);
 
           if (calendar.platform === "airbnb" || calendar.platform === "gathern") {
              const summaryLower = (event.summary || "").toLowerCase();
@@ -148,6 +146,7 @@ export async function POST() {
              }
           }
 
+          // التحقق من وجود الحجز الموجود (للتأكد من عدم تعديل الحجوزات المحررة يدوياً)
           const { data: existingReservation } = await supabase
             .from("reservations")
             .select("id, is_manually_edited")
@@ -157,8 +156,13 @@ export async function POST() {
             .eq("end_date", event.end)
             .maybeSingle();
 
+          // تخطي الحجوزات المحررة يدوياً - لا نعدلها
           if (existingReservation?.is_manually_edited) continue;
 
+          // استخدام upsert لمنع التكرار:
+          // - إذا كان الحجز موجوداً (نفس unit_id, platform, start_date, end_date)، سيتم تحديثه
+          // - إذا لم يكن موجوداً، سيتم إنشاؤه
+          // الـ unique constraint في قاعدة البيانات يضمن عدم وجود تكرارات
           const { error: upsertError } = await supabase.from("reservations").upsert(
             {
               unit_id: calendar.unit_id,
@@ -176,20 +180,9 @@ export async function POST() {
           if (!upsertError) newBookings++;
         }
 
-        const { data: existingPrimaryReservations } = await supabase
-          .from("reservations")
-          .select("id, start_date, end_date, is_manually_edited")
-          .eq("unit_id", calendar.unit_id)
-          .eq("platform", calendar.platform);
-
-        if (existingPrimaryReservations) {
-          for (const reservation of existingPrimaryReservations) {
-            const range = `${reservation.start_date}-${reservation.end_date}`;
-            if (!validEventRangesForPrimary.has(range) && !reservation.is_manually_edited) {
-              await supabase.from("reservations").delete().eq("id", reservation.id);
-            }
-          }
-        }
+        // لا نمسح الحجوزات القديمة - نتركها كما هي
+        // الحجوزات القديمة تبقى محفوظة حتى لو لم تعد موجودة في الـ iCal الجديد
+        // المستخدم يمكنه حذفها يدوياً إذا أراد
 
         await supabase.from("units").update({ last_synced_at: new Date().toISOString() }).eq("id", calendar.unit_id);
         unitsProcessed++;
@@ -203,14 +196,10 @@ export async function POST() {
     // =========================================================================
     // Pass 2: معالجة التقويمات الثانوية (Airbnb & Gathern & Others)
     // =========================================================================
-    const validEventRanges = new Map<string, Set<string>>();
-    
     for (const calendar of calendars) {
       if (calendar.is_primary) continue;
 
       const unitId = calendar.unit_id;
-      if (!validEventRanges.has(unitId)) validEventRanges.set(unitId, new Set());
-      const currentCalendarValidRanges = new Set<string>();
 
       try {
         console.log(`[NON-PRIMARY] Syncing: ${calendar.unit.unit_name} (${calendar.platform})`);
@@ -261,6 +250,7 @@ export async function POST() {
             continue;
           }
 
+          // التحقق من وجود الحجز الموجود (للتأكد من عدم تعديل الحجوزات المحررة يدوياً)
           const { data: existingReservation } = await supabase
             .from("reservations")
             .select("id, is_manually_edited")
@@ -270,11 +260,15 @@ export async function POST() {
             .eq("end_date", event.end)
             .maybeSingle();
 
+          // تخطي الحجوزات المحررة يدوياً - لا نعدلها
           if (existingReservation?.is_manually_edited) {
-             currentCalendarValidRanges.add(eventRange);
              continue;
           }
 
+          // استخدام upsert لمنع التكرار:
+          // - إذا كان الحجز موجوداً (نفس unit_id, platform, start_date, end_date)، سيتم تحديثه
+          // - إذا لم يكن موجوداً، سيتم إنشاؤه
+          // الـ unique constraint في قاعدة البيانات يضمن عدم وجود تكرارات
           const { error: upsertError } = await supabase.from("reservations").upsert(
             {
               unit_id: calendar.unit_id,
@@ -291,26 +285,12 @@ export async function POST() {
 
           if (!upsertError) {
              newBookings++;
-             currentCalendarValidRanges.add(eventRange);
           }
         }
 
-        if (calendar.platform === "airbnb" || calendar.platform === "gathern") {
-           const { data: oldReservations } = await supabase
-             .from("reservations")
-             .select("id, start_date, end_date, is_manually_edited")
-             .eq("unit_id", calendar.unit_id)
-             .eq("platform", calendar.platform);
-
-           if (oldReservations) {
-             for (const res of oldReservations) {
-               const range = `${res.start_date}-${res.end_date}`;
-               if (!currentCalendarValidRanges.has(range) && !res.is_manually_edited) {
-                 await supabase.from("reservations").delete().eq("id", res.id);
-               }
-             }
-           }
-        }
+        // لا نمسح الحجوزات القديمة - نتركها كما هي
+        // الحجوزات القديمة تبقى محفوظة حتى لو لم تعد موجودة في الـ iCal الجديد
+        // المستخدم يمكنه حذفها يدوياً إذا أراد
 
         await supabase.from("units").update({ last_synced_at: new Date().toISOString() }).eq("id", calendar.unit_id);
         unitsProcessed++;

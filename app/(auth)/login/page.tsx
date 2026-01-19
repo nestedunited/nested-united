@@ -43,6 +43,9 @@ export default function LoginPage() {
           return;
         }
 
+        // Refresh session immediately to ensure it persists forever
+        await supabase.auth.refreshSession();
+
         router.push("/dashboard");
         router.refresh();
       }
