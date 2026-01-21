@@ -40,8 +40,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // 2. التحقق من الصلاحيات
-  const hasPermission = await checkUserPermission(authUser.id, "/dashboard/units", "create");
+  // 2. التحقق من الصلاحيات (استخدام "edit" لأن إنشاء وحدة جديدة يتطلب صلاحية التعديل)
+  const hasPermission = await checkUserPermission(authUser.id, "/dashboard/units", "edit");
   if (!hasPermission) {
     return NextResponse.json({ error: "Forbidden: لا تملك صلاحية إضافة وحدات" }, { status: 403 });
   }
