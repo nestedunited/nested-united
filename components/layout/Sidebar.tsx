@@ -72,41 +72,34 @@ const navItems: NavItem[] = [
 
 export function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false);
+  // Keep state in case we want to re-enable mobile drawer later, but sidebar is rendered as static now.
+  const [isOpen, setIsOpen] = useState(true);
 
   return (
     <>
-      {/* Mobile Menu Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 right-4 z-50 bg-white border border-gray-200 rounded-lg p-2 shadow-lg"
-        aria-label="Toggle menu"
-      >
-        {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-      </button>
-
-      {/* Overlay for mobile */}
-      {isOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
+      {/* Sidebar (static - always visible) */}
       <aside
         className={cn(
-          "bg-white border-l border-gray-200 min-h-screen p-4 fixed lg:static inset-y-0 right-0 z-40 transform transition-transform duration-300 ease-in-out",
-          "w-64",
-          isOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"
+          "bg-white border-l border-gray-200 min-h-screen p-4 w-64 flex-shrink-0"
         )}
       >
-        <nav className="space-y-2 pt-12 lg:pt-0">
-          {navItems.map((item) => (
-            <div key={item.href} onClick={() => setIsOpen(false)}>
-              <SidebarItem {...item} />
-            </div>
-          ))}
+        <nav className="space-y-2">
+          {navItems.map((item) => {
+            // Only super admins can see Users and Activity Logs
+            if (
+              (item.href === "/dashboard/users" ||
+                item.href === "/dashboard/activity-logs") &&
+              user.role !== "super_admin"
+            ) {
+              return null;
+            }
+
+            return (
+              <div key={item.href}>
+                <SidebarItem {...item} />
+              </div>
+            );
+          })}
         </nav>
       </aside>
     </>
