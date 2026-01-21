@@ -23,11 +23,14 @@ export default async function DashboardLayout({
   }
 
   // Get user data from users table
-  const { data: user } = await supabase
+  const {
+    data: user,
+    error: userError,
+  } = await supabase
     .from("users")
     .select("*")
     .eq("id", authUser.id)
-    .single();
+    .maybeSingle();
 
   // If user record is missing, allow the request to continue.
   // A DB trigger/backfill migration ensures this row exists; this avoids a hard lockout/redirect loop.

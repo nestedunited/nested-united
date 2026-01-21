@@ -25,7 +25,8 @@ export default function LoginPage() {
       });
 
       if (signInError) {
-        setError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
+        // Show the real auth error to help debug Netlify env / settings issues
+        setError(signInError.message || "فشل تسجيل الدخول");
         return;
       }
 
@@ -42,6 +43,9 @@ export default function LoginPage() {
 
         // If there's no users-row yet (bootstrap) or query error, don't treat as disabled.
         // The DB trigger/backfill migration should create it automatically.
+        if (userError) {
+          console.error("[Login] users lookup error:", userError);
+        }
         if (userData && userData.is_active === false) {
           await supabase.auth.signOut();
           setError("حسابك معطل. يرجى التواصل مع المسؤول");
