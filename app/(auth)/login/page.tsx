@@ -31,6 +31,24 @@ export default function LoginPage() {
       }
 
       if (data.user) {
+        // IMPORTANT (Netlify/SSR): persist session via server so SSR can read it from cookies
+        if (data.session?.access_token && data.session?.refresh_token) {
+          const r = await fetch("/api/auth/set-session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              access_token: data.session.access_token,
+              refresh_token: data.session.refresh_token,
+            }),
+          });
+
+          if (!r.ok) {
+            const t = await r.text().catch(() => "");
+            setError(`فشل حفظ الجلسة على السيرفر: ${t || r.status}`);
+            return;
+          }
+        }
+
         // Check if user is active
         const {
           data: userData,
