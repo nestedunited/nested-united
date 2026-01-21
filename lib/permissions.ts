@@ -90,7 +90,13 @@ export async function checkUserPermission(
 
   // For admins, check permissions table
   if (!permission) {
-    // If no specific permission set, default to false (no access)
+    // إذا لم يكن هناك صلاحيات محددة في الجدول، نعطي المدراء (admin) صلاحية كاملة افتراضيًا
+    if (user.role === "admin") {
+      serverPermissionCache.set(cacheKey, { result: true, timestamp: now });
+      return true;
+    }
+
+    // أي دور آخر بدون صلاحية صريحة → رفض
     serverPermissionCache.set(cacheKey, { result: false, timestamp: now });
     return false;
   }
