@@ -31,13 +31,16 @@ export default function LoginPage() {
 
       if (data.user) {
         // Check if user is active
-        const { data: userData } = await supabase
+        const {
+          data: userData,
+          error: userError,
+        } = await supabase
           .from("users")
           .select("is_active")
           .eq("id", data.user.id)
-          .single();
+          .maybeSingle();
 
-        // If there's no users-row yet (bootstrap), don't treat as disabled.
+        // If there's no users-row yet (bootstrap) or query error, don't treat as disabled.
         // The DB trigger/backfill migration should create it automatically.
         if (userData && userData.is_active === false) {
           await supabase.auth.signOut();
