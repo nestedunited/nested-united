@@ -29,7 +29,9 @@ export default async function DashboardLayout({
     .eq("id", authUser.id)
     .single();
 
-  if (!user || !user.is_active) {
+  // If user record is missing, allow the request to continue.
+  // A DB trigger/backfill migration ensures this row exists; this avoids a hard lockout/redirect loop.
+  if (user && !user.is_active) {
     redirect("/login");
   }
 

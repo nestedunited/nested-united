@@ -37,7 +37,9 @@ export default function LoginPage() {
           .eq("id", data.user.id)
           .single();
 
-        if (!userData?.is_active) {
+        // If there's no users-row yet (bootstrap), don't treat as disabled.
+        // The DB trigger/backfill migration should create it automatically.
+        if (userData && userData.is_active === false) {
           await supabase.auth.signOut();
           setError("حسابك معطل. يرجى التواصل مع المسؤول");
           return;
