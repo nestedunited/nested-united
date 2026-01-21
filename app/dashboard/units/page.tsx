@@ -15,8 +15,7 @@ async function getUnits() {
         id,
         platform,
         ical_url,
-        is_primary,
-        platform_account:platform_accounts(id, account_name, platform)
+        is_primary
       )
     `)
     .order("created_at", { ascending: false });
